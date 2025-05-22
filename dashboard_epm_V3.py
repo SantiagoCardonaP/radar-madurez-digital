@@ -18,8 +18,6 @@ file = st.file_uploader("Sube el archivo CSV de comentarios (delimitado por punt
 
 if file:
     df = pd.read_csv(file, sep=";")
-    st.subheader("Vista general de los datos")
-    st.dataframe(df.head())
 
     # Filtros
     filial = st.multiselect("Filial", df['Filial'].dropna().unique())
@@ -30,6 +28,9 @@ if file:
         df_filtrado = df_filtrado[df_filtrado['Filial'].isin(filial)]
     if eje:
         df_filtrado = df_filtrado[df_filtrado['Eje_tematico'].isin(eje)]
+
+    st.subheader("Vista general de los datos (10 primeros registros filtrados)")
+    st.dataframe(df_filtrado.head(10))
 
     st.subheader("Distribución de Sentimientos")
     sentiments_df = df_filtrado[['Negativo', 'Neutral', 'Positivo']].sum().reset_index()
@@ -66,7 +67,7 @@ if file:
     plt.axis("off")
     st.pyplot(plt)
 
-    # Entrada para la IA
+    # Entrada a la IA
     st.subheader("Hazle una pregunta a la IA sobre lo que estás viendo")
     user_input = st.text_area("¿Qué quieres saber?", "")
 
