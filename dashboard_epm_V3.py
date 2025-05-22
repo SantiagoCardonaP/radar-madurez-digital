@@ -29,8 +29,9 @@ if file:
     if eje:
         df_filtrado = df_filtrado[df_filtrado['Eje_tematico'].isin(eje)]
 
-    st.subheader("Vista general de los datos (10 primeros registros filtrados)")
-    st.dataframe(df_filtrado.head(10))
+    # Mostrar menciones aleatorias
+    st.subheader("Vista general de los datos")
+    st.dataframe(df_filtrado.sample(frac=1).reset_index(drop=True))
 
     st.subheader("Distribución de Sentimientos")
     sentiments_df = df_filtrado[['Negativo', 'Neutral', 'Positivo']].sum().reset_index()
