@@ -3,8 +3,9 @@ import streamlit as st
 import pandas as pd
 from openai import OpenAI
 import altair as alt
-from wordcloud import WordCloud
+from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
+import re
 
 # Inicializar cliente OpenAI
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
@@ -16,7 +17,7 @@ st.title("Dashboard EPM – Análisis de Social Listening con IA")
 file = st.file_uploader("Sube el archivo CSV de comentarios", type="csv")
 
 if file:
-    df = pd.read_csv(file, sep=";")
+    df = pd.read_csv(file)
     st.subheader("Vista general de los datos")
     st.dataframe(df.head())
 
@@ -35,10 +36,34 @@ if file:
     sentiments_df.columns = ['Sentimiento', 'Total']
     st.bar_chart(sentiments_df.set_index('Sentimiento'))
 
-    # Nube de palabras
-    st.subheader("Nube de palabras (Menciones)")
-    text = " ".join(df_filtrado['Mencion'].dropna().astype(str))
-    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+    # Nube de palabras con limpieza
+    st.subheader("Nube de palabras (Menciones) depurada")
+
+    # Limpiar texto: eliminar puntuación, minúsculas, y palabras irrelevantes
+    raw_text = " ".join(df_filtrado['Mencion'].dropna().astype(str))
+    raw_text = re.sub(r'[^\w\s]', '', raw_text.lower())
+
+    # Lista de palabras irrelevantes adicionales (en español)
+    stopwords_es = set(STOPWORDS)
+    stopwords_es.update([
+        "de", "la", "que", "el", "en", "y", "a", "los", "del", "se", "las",
+        "por", "un", "para", "con", "no", "una", "su", "al", "es", "lo",
+        "como", "más", "pero", "sus", "ya", "o", "este", "sí", "porque",
+        "esta", "entre", "cuando", "muy", "sin", "sobre", "también", "me",
+        "hasta", "hay", "donde", "quien", "desde", "todo", "nos", "durante",
+        "todos", "uno", "les", "ni", "contra", "otros", "ese", "eso", "ante",
+        "ellos", "e", "esto", "mí", "antes", "algunos", "qué", "unos", "yo",
+        "otro", "otras", "otra", "él", "tanto", "esa", "estos", "mucho",
+        "quienes", "nada", "muchos", "cual", "poco", "ella", "estar", "estas"
+    ])
+
+    wordcloud = WordCloud(
+        width=800,
+        height=400,
+        background_color='white',
+        stopwords=stopwords_es
+    ).generate(raw_text)
+
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis("off")
     st.pyplot(plt)
