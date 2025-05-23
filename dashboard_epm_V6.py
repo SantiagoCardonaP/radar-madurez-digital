@@ -6,7 +6,6 @@ from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 from gtts import gTTS
 import os
-from pydub import AudioSegment
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
