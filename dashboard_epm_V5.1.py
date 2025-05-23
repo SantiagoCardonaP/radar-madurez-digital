@@ -83,7 +83,8 @@ if file:
 Estos son datos agregados por territorio de comunicación:
 {resumen_str}
 
-Genera un resumen de las percepciones con porcentajes e insights, y recomendaciones de narrativa digital que contenga una frase de narrativa emocional y acciones puntuales con su respectiva táctica, basadas en estos datos.
+Genera un resumen de las percepciones con porcentajes e insights, y recomendaciones de narrativa digital que contenga una frase de narrativa emocional y acciones puntuales con su respectiva táctica, 
+basadas en estos datos. No pongas explícito en el análisis el Territorio_comunicacion No asignado.
 
 """
 
