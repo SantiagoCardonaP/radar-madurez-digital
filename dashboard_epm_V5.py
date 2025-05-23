@@ -58,7 +58,7 @@ if file:
         resumen = df_filtered.groupby("Territorio_comunicacion")[["Negativo","Neutral","Positivo"]].sum().reset_index()
         resumen_str = resumen.to_string(index=False)
 
-        prompt_informe = f\"\"\"
+        prompt_informe = f"""
 {base_prompt}
 
 Estos son datos agregados por territorio de comunicación:
@@ -66,7 +66,7 @@ Estos son datos agregados por territorio de comunicación:
 
 Genera un resumen de las percepciones y las acciones y recomendaciones para narrativa digital, basadas en estos datos.
 
-\"\"\"
+"""
 
         with st.spinner("Generando informe..."):
             response = client.chat.completions.create(
@@ -83,7 +83,7 @@ Genera un resumen de las percepciones y las acciones y recomendaciones para narr
     user_input = st.text_area("¿Qué quieres saber?", "")
 
     if user_input:
-        prompt_pregunta = f\"\"\"
+        prompt_pregunta = f"""
 {base_prompt}
 
 Estos son ejemplos individuales de menciones:
@@ -91,7 +91,7 @@ Estos son ejemplos individuales de menciones:
 
 Responde de forma clara y útil:
 {user_input}
-\"\"\"
+"""
         with st.spinner("Generando respuesta..."):
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
