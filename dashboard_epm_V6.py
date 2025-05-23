@@ -4,6 +4,8 @@ import re
 from openai import OpenAI
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
+from gtts import gTTS
+import os
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -11,7 +13,7 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 with open("prompt_base.txt", "r", encoding="utf-8") as f:
     base_prompt = f.read()
 
-st.image("https://e7.pngegg.com/pngimages/416/11/png-clipart-empresas-publicas-de-medellin-water-subsidiary-%E5%BB%BA%E7%AD%91logo-company-text.png")
+st.image("https://raw.githubusercontent.com/SantiagoCardonaP/epm-dashboard-social-listening/2fdfac81f49d7c03afea8e29c0d67d96bcdcf750/logo-grupo-epm%20(1).png")
 st.title("Asistente de percepción de marca con IA")
 st.subheader("Te cuento cómo está nuestra percepción de marca en los territorios")
 
@@ -93,8 +95,7 @@ basadas en estos datos. No pongas explícito en el análisis el Territorio_comun
 
     # Recuadro para preguntas libres
     st.header("Quieres profundizar en algo mas? ¡Pregúntame!")
-    st.subheader("Ejemplo: Qué podemos hacer para mejorar la percepción de la sostenibildiad en el territorio?")
-    user_input = st.text_area("¿Qué quieres saber?", "")
+    user_input = st.text_area("Ejemplo: Qué podemos hacer para mejorar la percepción de la sostenibildiad en el territorio?", "")
 
     if user_input:
         prompt_pregunta = f"""
