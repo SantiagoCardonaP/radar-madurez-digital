@@ -72,6 +72,19 @@ if file:
     plt.axis("off")
     st.pyplot(plt)
 
+    # CSS para estilizar el botón
+    st.markdown("""
+    <style>
+    div.stButton > button:first-child {
+        display: block;
+        margin: 0 auto;
+        font-weight: bold;
+        font-size: 20px;
+        padding: 10px 30px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     # Generar informe con base en filtros
     if st.button("Generar informe de percepciones y recomendaciones"):
         resumen = df_filtrado.groupby("Territorio_comunicacion")[["Negativo","Neutral","Positivo"]].sum().reset_index()
