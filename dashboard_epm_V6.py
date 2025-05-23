@@ -95,19 +95,9 @@ basadas en estos datos. No pongas explícito en el análisis el Territorio_comun
             audio_path = "informe_audio.mp3"
             tts.save(audio_path)
 
-            # Aumentar la velocidad con pydub (1.25x)
-            sound = AudioSegment.from_file(audio_path)
-            faster_sound = sound._spawn(sound.raw_data, overrides={
-                "frame_rate": int(sound.frame_rate * 1.25)
-            }).set_frame_rate(sound.frame_rate)
-
-            # Guardar audio modificado
-            fast_audio_path = "informe_audio_125x.mp3"
-            faster_sound.export(fast_audio_path, format="mp3")
-
             # Reproducir el audio en Streamlit
             st.subheader("¿Quieres que te lea los insights?")
-            st.audio(fast_audio_path, format='audio/mp3')
+            st.audio(audio_path, format='audio/mp3')
 
     # Recuadro para preguntas libres
     st.header("Quieres profundizar en algo mas? ¡Pregúntame!")
