@@ -6,3 +6,4 @@ matplotlib
 wordcloud
 openai>=1.0.0
 gTTS
+gTTS pydub
