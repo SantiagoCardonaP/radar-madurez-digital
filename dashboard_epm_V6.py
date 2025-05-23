@@ -85,8 +85,12 @@ basadas en estos datos. No pongas explícito en el análisis el Territorio_comun
             st.markdown("### Informe generado")
             st.write(informe)
 
-            # Convertir texto a audio en español
-            tts = gTTS(text=informe, lang='es')
+            # Limpiar y formatear el texto para una mejor lectura
+            texto_para_voz = re.sub(r'[^\w\s.,¡!¿?áéíóúÁÉÍÓÚñÑ]', '', informe)
+            texto_para_voz = re.sub(r'\n+', '. ', texto_para_voz)
+
+            # Generar y guardar el audio
+            tts = gTTS(text=texto_para_voz, lang='es')
             audio_path = "informe_audio.mp3"
             tts.save(audio_path)
 
