@@ -14,8 +14,7 @@ with open("prompt_base.txt", "r", encoding="utf-8") as f:
 st.title("Dashboard EPM – Análisis de Social Listening con IA")
 
 # Ruta del archivo predeterminado
-default_csv_path = "Menciones_EPM.csv"
-file = pd.read_csv(default_csv_path, sep=";")
+file = "Menciones_EPM.csv"
 
 if file:
     df = pd.read_csv(file, sep=";")
