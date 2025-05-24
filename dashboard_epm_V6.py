@@ -310,7 +310,7 @@ Responde de forma clara y útil:
         sentiments_df.columns = ['Sentimiento', 'Total']
         st.bar_chart(sentiments_df.set_index('Sentimiento'))
 
-    with st.expander("Nube de palabras (Menciones) depurada"):
+    with st.expander("Nube de palabras"):
         raw_text = " ".join(df_filtrado['Mencion'].dropna().astype(str))
         raw_text = re.sub(r'[^\w\s]', '', raw_text.lower())
 
