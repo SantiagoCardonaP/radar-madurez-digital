@@ -86,6 +86,7 @@ st.markdown(
 
     label, .stSelectbox label, .stMultiSelect label {{
         color: var(--text-color) !important;
+        font-size: 0.9em;
     }}
 
     div.stButton > button {{
@@ -109,6 +110,41 @@ st.markdown(
     .stTextArea textarea {{
         background-color: var(--secondary-background-color);
         color: var(--text-color);
+    }}
+
+    details {{
+        background-color: transparent;
+        color: var(--text-color);
+        border: none;
+        border-bottom: 1px solid #4A3255;
+        padding: 0.3em 0;
+        font-family: 'Montserrat', sans-serif;
+        margin: 0;
+    }}
+
+    summary {{
+        color: var(--primary-color);
+        font-size: 1.05em;
+        font-weight: 500;
+        cursor: pointer;
+        list-style: none;
+    }}
+
+    summary::marker, summary::-webkit-details-marker {{
+        color: var(--text-color);
+    }}
+
+    h1#asistente-de-percepcion-de-marca-con-ia {{
+        margin-top: 100px;
+        font-size: 2.75rem;
+        font-weight: 700;
+        padding: 1.25rem 0px 1rem;
+    }}
+
+    .st-emotion-cache-seewz2 h2 {{
+        font-size: 1.4rem;
+        padding: 1rem 0px;
+        color: var(--primary-color);
     }}
     </style>
     """,
