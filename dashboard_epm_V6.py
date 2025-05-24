@@ -102,6 +102,13 @@ div[data-testid="stAppViewContainer"] > section > div {{
         margin-bottom: 1em;
     }}
 
+    h3 {{
+        font-size: 1.3em;
+        color: #ff5722;
+        font-weight: normal;
+        margin-bottom: 1em;
+    }}
+
     label, .stSelectbox label, .stMultiSelect label {{
         color: white !important;
         font-size: 0.9em;
@@ -202,7 +209,7 @@ st.markdown(
 )
 
 st.markdown(
-    "<h6 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca en los territorios</h2>", 
+    "<h3 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca en los territorios</h2>", 
     unsafe_allow_html=True
 )
 
