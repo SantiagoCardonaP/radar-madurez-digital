@@ -225,8 +225,12 @@ if file:
         filial = []
         df_filtrado_filial = df_filtrado_region
 
+    # Excluir el territorio "No asignado"
     territorios_disponibles = df_filtrado_filial['Territorio_comunicacion'].unique()
-    if territorio := st.multiselect("Territorio de comunicación", territorios_disponibles, placeholder="Elige una opción"):
+    territorios_filtrados = [t for t in territorios_disponibles if t.strip().lower() != "no asignado"]
+    
+    # Mostrar filtro sin "No asignado"
+    if territorio := st.multiselect("Territorio de comunicación", territorios_filtrados, placeholder="Elige una opción"):
         df_filtrado = df_filtrado_filial[df_filtrado_filial['Territorio_comunicacion'].isin(territorio)]
     else:
         territorio = []
