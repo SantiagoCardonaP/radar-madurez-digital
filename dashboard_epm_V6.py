@@ -196,8 +196,15 @@ with open("prompt_base.txt", "r", encoding="utf-8") as f:
 
 st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
 # === TÍTULOS ===
-st.markdown("<h1>Asistente de percepción de marca con IA</h1>", unsafe_allow_html=True)
-st.markdown("<h2>Te cuento como está nuestra percepción de marca en los territorios</h2>", unsafe_allow_html=True)
+st.markdown(
+    "<h1 style='text-align: center;'>Asistente de percepción de marca con IA</h1>", 
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    "<h2 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca en los territorios</h2>", 
+    unsafe_allow_html=True
+)
 
 # === CARGAR DATOS ===
 file = "Menciones_EPM.csv"
