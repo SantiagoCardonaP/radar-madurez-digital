@@ -275,7 +275,12 @@ Responde de forma clara y útil:
 {user_input}
 """
         with st.spinner("Generando respuesta..."):
-            answer = "💡 Esta sería una respuesta generada por IA (simulado)."
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt_pregunta}],
+                temperature=0.3
+            )
+            answer = response.choices[0].message.content
             st.markdown("### Respuesta de la IA")
             st.write(answer)
 
