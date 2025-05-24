@@ -185,6 +185,12 @@ div[data-testid="stAppViewContainer"] > section > div {{
     padding: 1rem 0px;
     color: #ff5722;
 }}
+    h2#te-cuento-como-esta-nuestra-percepcion-de-marca-en-los-territorios{{
+    font-size: 1.4rem;
+    padding: 1rem 0px;
+    color: #ff5722 !important;
+    }}
+    
     </style>
     """,
     unsafe_allow_html=True
@@ -202,7 +208,7 @@ st.markdown(
 )
 
 st.markdown(
-    "<h5 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca en los territorios</h5>", 
+    "<h2 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca en los territorios</h2>", 
     unsafe_allow_html=True
 )
 
