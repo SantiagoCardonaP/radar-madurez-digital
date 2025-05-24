@@ -209,7 +209,7 @@ st.markdown(
 )
 
 st.markdown(
-    "<h3 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca en los territorios</h2>", 
+    "<h3 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca en los territorios</h3>", 
     unsafe_allow_html=True
 )
 
