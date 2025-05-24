@@ -13,7 +13,7 @@ import io
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # === LOGO ABSOLUTO FUERA DEL CONTENEDOR ===
-logo_path = "/workspaces/epm-dashboard-social-listening/logo-grupo-epm (1).png"
+logo_path = "logo-grupo-epm (1).png"
 img = Image.open(logo_path)
 buffered = io.BytesIO()
 img.save(buffered, format="PNG")
@@ -37,7 +37,7 @@ st.markdown(
 st.markdown("<div style='margin-top: 120px;'></div>", unsafe_allow_html=True)
 
 # === ESTILO DE FONDO ===
-image_path = "/workspaces/epm-dashboard-social-listening/fondo-julius-epm.png"
+image_path = "fondo-julius-epm.png"
 img = Image.open(image_path)
 buffered = io.BytesIO()
 img.save(buffered, format="PNG")
@@ -306,7 +306,7 @@ Responde de forma clara y útil:
         st.pyplot(plt)
 
 # === LOGO FINAL ===
-final_logo_path = "/workspaces/epm-dashboard-social-listening/logo-julius.png"
+final_logo_path = "logo-julius.png"
 final_img = Image.open(final_logo_path)
 buffered = io.BytesIO()
 final_img.save(buffered, format="PNG")
