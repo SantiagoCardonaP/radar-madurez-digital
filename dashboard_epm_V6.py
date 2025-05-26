@@ -121,7 +121,7 @@ div[data-testid="stAppViewContainer"] > section > div {{
 
     div.stButton > button:hover {{
         background-color: #e64a19;
-        color:#4B006E !important;
+        color:#ffffff !important;
     }}
 
     .stSelectbox div[data-baseweb="select"] {{
@@ -131,7 +131,7 @@ div[data-testid="stAppViewContainer"] > section > div {{
     }}
 
     .stTextArea textarea {{
-        background-color: #4b006e;
+        background-color: #4A3255;
         color: white;
     }}
 
@@ -175,20 +175,31 @@ div[data-testid="stAppViewContainer"] > section > div {{
         flex-shrink: 0;
     }}
     h1#asistente-de-percepcion-de-marca-con-ia {{
-    margin-top:100px;
-    font-size: 2.75rem;
-    font-weight: 700;
-    padding: 1.25rem 0px 1rem;
-}}
+        color:#ffffff !important;
+        margin-top:100px;
+        font-size: 2.75rem;
+        font-weight: 700;
+        padding: 1.25rem 0px 1rem;
+        text-align:left;
+    }}
+    h1#quieres-profundizar-en-algo-mas {{
+        color:#ffffff !important;
+        margin-top:0px !important;
+        font-size: 2.75rem;
+        font-weight: 700;
+        padding: 1.25rem 0px 1rem;
+        text-align:left;
+    }}
+    h2#te-cuento-como-esta-nuestra-percepcion-de-marca-en-los-territorios{{
+        font-size: 1.4rem;
+        padding: 1rem 0px;
+        color: #ff5722 !important;
+        text-align:left;
+    }}
     .st-emotion-cache-seewz2 h2 {{
     font-size: 1.4rem;
     padding: 1rem 0px;
     color: #ff5722;
-}}
-    h2#te-cuento-como-esta-nuestra-percepcion-de-marca-en-los-territorios{{
-    font-size: 1.4rem;
-    padding: 1rem 0px;
-    color: #ff5722 !important;
     }}
     
     </style>
