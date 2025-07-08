@@ -227,35 +227,10 @@ st.markdown(
 file = "Menciones_EPM.csv"
 if file:
     df = pd.read_csv(file, sep=";")
-
-    # === FILTROS ===
-    df_filtrado_region = df.copy()
-    if region := st.multiselect("Región", df['Region'].unique(), placeholder="Elige una opción"):
-        df_filtrado_region = df[df['Region'].isin(region)]
-    else:
-        region = []
-
-    filiales_disponibles = df_filtrado_region['Filial'].unique()
-    if filial := st.multiselect("Filial", filiales_disponibles, placeholder="Elige una opción"):
-        df_filtrado_filial = df_filtrado_region[df_filtrado_region['Filial'].isin(filial)]
-    else:
-        filial = []
-        df_filtrado_filial = df_filtrado_region
-
-    # Excluir el territorio "No asignado"
-    territorios_disponibles = df_filtrado_filial['Territorio_comunicacion'].unique()
-    territorios_filtrados = [t for t in territorios_disponibles if t.strip().lower() != "no asignado"]
     
-    # Mostrar filtro sin "No asignado"
-    if territorio := st.multiselect("Territorio de comunicación", territorios_filtrados, placeholder="Elige una opción"):
-        df_filtrado = df_filtrado_filial[df_filtrado_filial['Territorio_comunicacion'].isin(territorio)]
-    else:
-        territorio = []
-        df_filtrado = df_filtrado_filial
-
     # === GENERAR INFORME ===
     if st.button("¿Quieres que genere el informe de percepciones y recomendaciones?"):
-        resumen = df_filtrado.groupby("Territorio_comunicacion")[["Negativo", "Neutral", "Positivo"]].sum().reset_index()
+        resumen = df.groupby("Territorio_comunicacion")[["Negativo", "Neutral", "Positivo"]].sum().reset_index()
         resumen_str = resumen.to_string(index=False)
 
         prompt_informe = f"""
@@ -264,8 +239,7 @@ if file:
 Estos son datos agregados por territorio de comunicación:
 {resumen_str}
 
-Genera un resumen de las percepciones con insights y recomendaciones de narrativa digital que contenga una frase de narrativa emocional y acciones puntuales con su respectiva táctica, 
-basadas en estos datos. No pongas explícito en el análisis el Territorio_comunicacion No asignado.
+Genera de manera concia un resumen de las menciones con insights y recomendaciones de narrativa digital que contenga una frase de narrativa emocional
 """
 
         with st.spinner("🧠 Aquí va el resumen generado por IA.."):
@@ -297,7 +271,7 @@ basadas en estos datos. No pongas explícito en el análisis el Territorio_comun
 {base_prompt}
 
 Estos son ejemplos individuales de menciones:
-{df_filtrado[['Mencion','Negativo','Neutral','Positivo','Territorio_comunicacion']].head(10).to_string(index=False)}
+{df_filtrado[['Mencion','Negativo','Neutral','Positivo']].head(10).to_string(index=False)}
 
 Responde de forma clara y útil:
 {user_input}
