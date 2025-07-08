@@ -49,7 +49,7 @@ st.markdown(
 
 # === Títulos ===
 st.markdown("<h1 style='text-align: center; margin-top:100px;'>Asistente de percepción de marca con IA</h1>", unsafe_allow_html=True)
-st.markdown("<h2 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca en los territorios</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca</h2>", unsafe_allow_html=True)
 
 # === Cargar datos ===
 df = pd.read_csv("Menciones_EPM.csv", sep=";")
@@ -60,7 +60,7 @@ with open("prompt_base.txt", "r", encoding="utf-8") as f:
 
 # === Función para generar informe ===
 def generar_informe(data):
-    resumen = data.groupby("Territorio_comunicacion")[['Negativo','Neutral','Positivo']].sum().reset_index()
+    resumen = data
     resumen_str = resumen.to_string(index=False)
     prompt = f"""
 {base_prompt}
