@@ -6,3 +6,4 @@ wordcloud
 openai>=1.0.0
 pillow
 tabulate
+collections
