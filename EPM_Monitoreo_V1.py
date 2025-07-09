@@ -49,7 +49,6 @@ st.markdown(
 
 # === Títulos ===
 st.markdown("<h1 style='text-align: center; margin-top:100px;'>Asistente de percepción de marca con IA</h1>", unsafe_allow_html=True)
-st.markdown("<h2 style='text-align: center;'>Te cuento cómo está nuestra percepción de marca</h2>", unsafe_allow_html=True)
 
 # === Cargar datos ===
 df = pd.read_csv("Menciones_EPM.csv", sep=";")
@@ -71,16 +70,11 @@ def generar_informe(df):
     
     # 4) Montamos el prompt
     prompt = f"""
-{base_prompt}
-
 Aquí tienes un resumen agregado por canal/fuente de la conversación:
 
 {md}
 
-Por favor, genera un análisis conciso de la percepción de marca, destacando:
-- Tendencias clave por fuente.
-- Puntos de mejora.
-- Recomendaciones de narrativa digital con un matiz emocional.
+{base_prompt}
 """
     # 5) Llamada
     resp = client.chat.completions.create(
