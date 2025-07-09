@@ -134,11 +134,10 @@ st.write(informe)
 
 # === Preguntas abiertas ===
 st.markdown("<h1>¿Quieres profundizar en algo más?</h1>", unsafe_allow_html=True)
-entrada = st.text_area("Presiona ctrl + enter para aplicar", "")
+entrada = st.text_area("Presiona ctrl + enter para preguntar", "")
 if entrada:
     ejemplos = df[['Mencion','Negativo','Neutral','Positivo']].head(10).to_string(index=False)
     prompt2 = f"""
-{base_prompt}
 
 Estos son ejemplos individuales de menciones:
 {ejemplos}
