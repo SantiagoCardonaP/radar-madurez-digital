@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import base64
 import io
+from collections import Counter
 
 # === Configuración de cliente OpenAI ===
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
