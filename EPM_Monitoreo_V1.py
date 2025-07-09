@@ -101,8 +101,6 @@ def generar_informe(df):
 
     # 4) Montaje del prompt
     prompt = f"""
-{base_prompt}
-
 ## Resumen agregado por fuente
 {agg_md}
 
@@ -111,6 +109,8 @@ def generar_informe(df):
 
 ## Insights cuantitativos
 {stats_md}
+
+Genera un análisis de las menciones, destacando los puntos clave y las recomendaciones de narrativa digital con un matiz emocional.
 
 """
     # 5) Llamada
@@ -126,12 +126,6 @@ def generar_informe(df):
 informe = generar_informe(df)
 st.markdown("### Informe generado")
 st.write(informe)
-
-# === Botón para nuevo informe ===
-if st.button("Generar nuevo informe"):
-    nuevo = generar_informe(df)
-    st.markdown("### Nuevo informe generado")
-    st.write(nuevo)
 
 # === Preguntas abiertas ===
 st.markdown("<h1>¿Quieres profundizar en algo más?</h1>", unsafe_allow_html=True)
