@@ -59,23 +59,37 @@ with open("prompt_base.txt", "r", encoding="utf-8") as f:
     base_prompt = f.read()
 
 # === Función para generar informe ===
-def generar_informe(data):
-    resumen = data
-    resumen_str = resumen.to_string(index=False)
+def generar_informe(df):
+    # 1) Agregados por Fuente
+    agg = df.groupby("Fuente")[["Negativo","Neutral","Positivo","Total"]].sum().reset_index()
+    # 2) Calculamos % de cada sentimiento sobre el total por Fuente
+    for col in ["Negativo","Neutral","Positivo"]:
+        agg[f"{col}_pct"] = (agg[col] / agg["Total"] * 100).round(1)
+    # 3) Convertimos a Markdown
+    md = agg.to_markdown(index=False, 
+        headers=["Fuente","Neg","Neu","Pos","Total","%Neg","%Neu","%Pos"])
+    
+    # 4) Montamos el prompt
     prompt = f"""
 {base_prompt}
 
-Estos son datos agregados por territorio de comunicación:
-{resumen_str}
+Aquí tienes un resumen agregado por canal/fuente de la conversación:
 
-Genera de manera concisa un resumen de las menciones con insights y recomendaciones de narrativa digital que contenga una frase de narrativa emocional
+{md}
+
+Por favor, genera un análisis conciso de la percepción de marca, destacando:
+- Tendencias clave por fuente.
+- Puntos de mejora.
+- Recomendaciones de narrativa digital con un matiz emocional.
 """
-    response = client.chat.completions.create(
+    # 5) Llamada
+    resp = client.chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.4
+        messages=[{"role":"user","content": prompt}],
+        temperature=0.4,
+        max_tokens=512
     )
-    return response.choices[0].message.content
+    return resp.choices[0].message.content
 
 # === Generar y mostrar informe inicial ===
 informe = generar_informe(df)
