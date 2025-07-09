@@ -59,22 +59,59 @@ with open("prompt_base.txt", "r", encoding="utf-8") as f:
 
 # === Función para generar informe ===
 def generar_informe(df):
-    # 1) Agregados por Fuente
-    agg = df.groupby("Fuente")[["Negativo","Neutral","Positivo","Total"]].sum().reset_index()
-    # 2) Calculamos % de cada sentimiento sobre el total por Fuente
+    # 1) Estadísticas agregadas por Fuente
+    agg = df.groupby("Fuente")[["Negativo","Neutral","Positivo","Total"]]\
+            .sum().reset_index()
     for col in ["Negativo","Neutral","Positivo"]:
         agg[f"{col}_pct"] = (agg[col] / agg["Total"] * 100).round(1)
-    # 3) Convertimos a Markdown
-    md = agg.to_markdown(index=False, 
-        headers=["Fuente","Neg","Neu","Pos","Total","%Neg","%Neu","%Pos"])
-    
-    # 4) Montamos el prompt
+    # Construyo una tabla Markdown compacta
+    headers = ["Fuente","Neg","Neu","Pos","Total","Neg_pct","Neu_pct","Pos_pct"]
+    lines = ["| " + " | ".join(headers) + " |",
+             "| " + " | ".join(["---"]*len(headers)) + " |"]
+    for _, row in agg.iterrows():
+        vals = [
+            row["Fuente"],
+            row["Negativo"], row["Neutral"], row["Positivo"],
+            row["Total"],
+            f'{row["Negativo_pct"]}%', f'{row["Neutral_pct"]}%', f'{row["Positivo_pct"]}%'
+        ]
+        lines.append("| " + " | ".join(str(v) for v in vals) + " |")
+    agg_md = "\n".join(lines)
+
+    # 2) Muestreo representativo de menciones (5 por fuente)
+    ejemplos = (df.dropna(subset=["Mencion"])
+                  .groupby("Fuente")["Mencion"]
+                  .apply(lambda s: s.sample(min(len(s), 5), random_state=42)
+                              .tolist())
+                  .to_dict())
+    ejemplos_md = "\n".join(
+        f"- **{fuente}**: «{'; '.join(textos)}»"
+        for fuente, textos in ejemplos.items()
+    )
+
+    # 3) Pre-resumen de palabras clave y longitud media
+    all_txt = " ".join(df["Mencion"].dropna().str.lower())
+    palabras = re.findall(r"\w+", all_txt)
+    top20 = Counter(palabras).most_common(20)
+    longitud_media = df["Mencion"].dropna().str.len().mean().round(1)
+    stats_md = (
+        f"- Longitud media de mención: {longitud_media} caracteres\n"
+        f"- Top 20 palabras clave: {', '.join(w for w,_ in top20)}"
+    )
+
+    # 4) Montaje del prompt
     prompt = f"""
-Aquí tienes un resumen agregado por canal/fuente de la conversación:
-
-{md}
-
 {base_prompt}
+
+## Resumen agregado por fuente
+{agg_md}
+
+## Ejemplos representativos de menciones (5 por fuente)
+{ejemplos_md}
+
+## Insights cuantitativos
+{stats_md}
+
 """
     # 5) Llamada
     resp = client.chat.completions.create(
