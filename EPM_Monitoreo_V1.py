@@ -111,7 +111,7 @@ def generar_informe(df):
 ## Insights cuantitativos
 {stats_md}
 
-Genera un análisis de las menciones, destacando los puntos clave y las recomendaciones de narrativa digital con un matiz emocional.
+Genera un análisis de las menciones de máximo 70 palabras, destacando los puntos clave y las recomendaciones de narrativa digital con un matiz emocional, no incluyas títulos.
 
 """
     # 5) Llamada
@@ -123,14 +123,18 @@ Genera un análisis de las menciones, destacando los puntos clave y las recomend
     )
     return resp.choices[0].message.content
 
+@st.cache_data(show_spinner=False)
+def generar_informe_cache(df):
+    return generar_informe(df)
+
 # === Generar y mostrar informe inicial ===
-informe = generar_informe(df)
+informe = generar_informe_cache(df)
 st.markdown("### Informe generado")
 st.write(informe)
 
 # === Preguntas abiertas ===
 st.markdown("<h1>¿Quieres profundizar en algo más?</h1>", unsafe_allow_html=True)
-entrada = st.text_area("Ejemplo: ¿Qué podemos hacer para mejorar la percepción de la sostenibilidad en el territorio?", "")
+entrada = st.text_area("Presiona ctrl + enter para aplicar", "")
 if entrada:
     ejemplos = df[['Mencion','Negativo','Neutral','Positivo']].head(10).to_string(index=False)
     prompt2 = f"""
