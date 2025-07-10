@@ -41,9 +41,8 @@ def crear_video_did(script_text: str) -> str:
     }
     # Inicia la petición
     resp = requests.post(DID_API_URL, json=payload, headers=HEADERS_DID)
+    print(resp.status_code, resp.text)
     resp.raise_for_status()
-    job = resp.json()
-    job_id = job.get("id")
 
     # Polling hasta finalizar
     status_url = f"{DID_API_URL}/{job_id}"
