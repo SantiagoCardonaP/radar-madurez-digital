@@ -41,8 +41,9 @@ def crear_video_did(script_text: str) -> str:
     }
     # Inicia la petición
     resp = requests.post(DID_API_URL, json=payload, headers=HEADERS_DID)
-    print(resp.status_code, resp.text)
     resp.raise_for_status()
+    job = resp.json()
+    job_id = job.get("id")
 
     # Polling hasta finalizar
     status_url = f"{DID_API_URL}/{job_id}"
@@ -144,7 +145,9 @@ def generar_informe(df):
 ## Insights cuantitativos
 {stats_md}
 
-Genera un análisis de las menciones de máximo 70 palabras, destacando los puntos clave y las recomendaciones de narrativa digital con un matiz emocional, no incluyas títulos.
+Genera un análisis de las menciones de máximo 100 palabras, con los siguientes componentes:
+Resumen del estado, Temas positivos y negativos, Canales y tópicos destacados.
+No incluyas títulos.
 
 """
     resp = client.chat.completions.create(
