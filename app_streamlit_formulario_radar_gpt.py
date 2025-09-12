@@ -8,6 +8,8 @@ import requests
 from bs4 import BeautifulSoup
 from PIL import Image
 import plotly.graph_objects as go
+from typing import Optional
+import textwrap
 
 # =============================
 # CONFIGURACIÓN BÁSICA / ESTILO
@@ -19,12 +21,12 @@ st.set_page_config(page_title="Diagnóstico & Recomendaciones con GPT", page_ico
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])  # mismo patrón que el proyecto original
 
 # === Marca y estilos (reutiliza el look&feel del proyecto existente) ===
-# Intenta cargar los mismos recursos; si no existen, continúa sin romper
 logo_path_top = "logo-grupo-epm (1).png"
 logo_path_bottom = "logo-julius.png"
 background_path = "fondo-julius-epm.png"
 
-def _img_to_b64(path: str) -> str | None:
+def img_to_b64(path: str) -> Optional[str]:
+    """Convierte una imagen a base64. Devuelve None si falla."""
     try:
         img = Image.open(path)
         buf = io.BytesIO()
@@ -34,9 +36,9 @@ def _img_to_b64(path: str) -> str | None:
     except Exception:
         return None
 
-b64_logo_top = _img_to_b64(logo_path_top)
-b64_logo_bottom = _img_to_b64(logo_path_bottom)
-b64_background = _img_to_b64(background_path)
+b64_logo_top = img_to_b64(logo_path_top)
+b64_logo_bottom = img_to_b64(logo_path_bottom)
+b64_background = img_to_b64(background_path)
 
 # Encabezado con logo centrado
 if b64_logo_top:
@@ -195,28 +197,32 @@ def build_summary_text(df: pd.DataFrame) -> str:
         lines.append(f"- {idx}: n={int(r['count'])}, promedio={r['mean']}")
     global_mean = df["Calificación"].mean().round(2)
     lines.append(f"Promedio general: {global_mean}")
-    return "".join(lines)
+    return "
+".join(lines)
 
 if st.button("Generar recomendaciones con GPT", key="btn_gpt_recos", use_container_width=True):
     try:
         summary = build_summary_text(df_plot)
         worst = df_plot.sort_values("Calificación").head(5)
+        worst_lines = [f"- ({r['Categoría']}) {r['Pregunta']} -> {r['Calificación']}" for _, r in worst.iterrows()]
         worst_text = "
-".join([f"- ({r['Categoría']}) {r['Pregunta']} -> {r['Calificación']}" for _, r in worst.iterrows()])
-        prompt = f"""
-Eres un consultor experto. Con base en un diagnóstico tipo encuesta (escala 1–5), genera:
-1) Hallazgos clave (máx. 6 bullets),
-2) 3–5 recomendaciones accionables priorizadas (RICE o impacto/esfuerzo),
-3) 3 quick wins (≤30 días),
-4) Riesgos si no se actúa,
-5) Métricas de seguimiento (KPI y umbrales).
+".join(worst_lines)
+        prompt = textwrap.dedent(
+            f"""
+            Eres un consultor experto. Con base en un diagnóstico tipo encuesta (escala 1–5), genera:
+            1) Hallazgos clave (máx. 6 bullets),
+            2) 3–5 recomendaciones accionables priorizadas (RICE o impacto/esfuerzo),
+            3) 3 quick wins (≤30 días),
+            4) Riesgos si no se actúa,
+            5) Métricas de seguimiento (KPI y umbrales).
 
-Contexto cuantitativo:
-{summary}
+            Contexto cuantitativo:
+            {summary}
 
-Preguntas con peores puntajes:
-{worst_text}
-"""
+            Preguntas con peores puntajes:
+            {worst_text}
+            """
+        ).strip()
         with st.spinner("Analizando…"):
             resp = client.chat.completions.create(
                 model="gpt-4o",
@@ -257,22 +263,24 @@ if st.button("Analizar sitio con GPT", key="btn_gpt_site", use_container_width=T
     else:
         raw_site_text = fetch_website_text(st.session_state.site_url)
         base_analysis = st.session_state.gpt_analysis or "(Aún no hay análisis base. Usa el botón del paso 3.)"
-        prompt_site = f"""
-Eres un consultor digital. Toma el diagnóstico cuantitativo y cualitativo previo y contrástalo con el contenido del sitio.
-Entrega:
-- Señales de alineación/desalineación entre el diagnóstico y el sitio.
-- Recomendaciones de UX, contenido y confianza (trust signals).
-- 5 acciones web priorizadas (impacto vs. esfuerzo).
+        prompt_site = textwrap.dedent(
+            f"""
+            Eres un consultor digital. Toma el diagnóstico cuantitativo y cualitativo previo y contrástalo con el contenido del sitio.
+            Entrega:
+            - Señales de alineación/desalineación entre el diagnóstico y el sitio.
+            - Recomendaciones de UX, contenido y confianza (trust signals).
+            - 5 acciones web priorizadas (impacto vs. esfuerzo).
 
-[Empresa]
-{st.session_state.empresa or 'N/A'}
+            [Empresa]
+            {st.session_state.empresa or 'N/A'}
 
-[Diagnóstico IA previo]
-{base_analysis}
+            [Diagnóstico IA previo]
+            {base_analysis}
 
-[Contenido del sitio]
-{raw_site_text}
-"""
+            [Contenido del sitio]
+            {raw_site_text}
+            """
+        ).strip()
         with st.spinner("Analizando el sitio…"):
             try:
                 resp2 = client.chat.completions.create(
@@ -304,7 +312,7 @@ if categories:
         polar=dict(radialaxis=dict(visible=True, range=[0,5])),
         showlegend=False,
         height=600,
-        margin=dict(t=30,b=30,l=30,r=30)
+        margin=dict(t=30, b=30, l=30, r=30),
     )
     radar_html = fig_export.to_html(full_html=False, include_plotlyjs='inline')
 
@@ -352,13 +360,13 @@ report_html = f"""
 
 <div class='section'>
   <h2>Informe de IA</h2>
-  <pre>{(st.session_state.gpt_analysis or 'Aún no generado.')}</pre>
+  <pre>{st.session_state.gpt_analysis or 'Aún no generado.'}</pre>
 </div>
 
 <div class='section'>
   <h2>Hallazgos del sitio</h2>
   <p><strong>URL:</strong> {st.session_state.site_url or 'N/D'}</p>
-  <pre>{(st.session_state.site_analysis or 'Aún no generado.')}</pre>
+  <pre>{st.session_state.site_analysis or 'Aún no generado.'}</pre>
 </div>
 
 <footer>
