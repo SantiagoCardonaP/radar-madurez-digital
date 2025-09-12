@@ -157,11 +157,11 @@ if df_plot["Calificación"].isna().any():
     df_plot["Calificación"] = df_plot["Calificación"].fillna(3)
 
 # =============================
-# 2) GRÁFICO RADAR (promedio por categoría) - MÁS GRANDE/LEGIBLE, SIN FONDO NEGRO
+# 2) GRÁFICO RADAR (sin fondo negro, un poco más pequeño y con etiquetas grandes con salto de línea)
 # =============================
 
-def _wrap_label(text: str, max_len: int = 16) -> str:
-    """Inserta saltos de línea <br> para que las etiquetas quepan."""
+def _wrap_label(text: str, max_len: int = 18) -> str:
+    """Inserta saltos <br> para que las etiquetas largas quepan."""
     words = str(text).split()
     lines, curr = [], []
     for w in words:
@@ -172,33 +172,32 @@ def _wrap_label(text: str, max_len: int = 16) -> str:
             curr = [w]
     if curr:
         lines.append(" ".join(curr))
-    return "<br>".join(lines) if lines else str(text)
+    return "<br>".join(lines)
 
 st.markdown("### 2) Radar de promedios por categoría")
 radar_df = df_plot.groupby("Categoría", dropna=False)["Calificación"].mean().reset_index()
 categories = radar_df["Categoría"].tolist()
 values = radar_df["Calificación"].round(2).tolist()
 
-wrapped_categories = [_wrap_label(c, 18) for c in categories]
-
-categories_closed = wrapped_categories + [wrapped_categories[0]] if wrapped_categories else []
+wrapped = [_wrap_label(c, 18) for c in categories]
+categories_closed = wrapped + [wrapped[0]] if wrapped else []
 values_closed = values + [values[0]] if values else []
 
-if wrapped_categories:
+if wrapped:
     fig = go.Figure(
-        data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill='toself', name='Promedio')]
+        data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill="toself", name="Promedio")]
     )
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0,5], tickfont=dict(size=16)),
-            angularaxis=dict(tickfont=dict(size=18))
+            radialaxis=dict(visible=True, range=[0, 5], tickfont=dict(size=16)),
+            angularaxis=dict(tickfont=dict(size=18)),
         ),
         font=dict(size=18),
         showlegend=False,
         margin=dict(t=60, b=60, l=60, r=60),
-        height=600,
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
+        height=600,  # un poco más pequeño
+        paper_bgcolor="rgba(0,0,0,0)",  # sin fondo negro
+        plot_bgcolor="rgba(0,0,0,0)",
     )
     st.plotly_chart(fig, use_container_width=True, theme=None)
 else:
@@ -216,8 +215,7 @@ def build_summary_text(df: pd.DataFrame) -> str:
         lines.append(f"- {idx}: n={int(r['count'])}, promedio={r['mean']}")
     global_mean = df["Calificación"].mean().round(2)
     lines.append(f"Promedio general: {global_mean}")
-    return "
-".join(lines)
+    return "\n".join(lines)
 
 if st.button("Generar recomendaciones con GPT", key="btn_gpt_recos", use_container_width=True):
     try:
@@ -226,8 +224,7 @@ if st.button("Generar recomendaciones con GPT", key="btn_gpt_recos", use_contain
         worst_lines = [
             f"- ({r['Categoría']}) {r['Pregunta']} -> {r['Calificación']}" for _, r in worst.iterrows()
         ]
-        worst_text = "
-".join(worst_lines)
+        worst_text = "\n".join(worst_lines)
         prompt = textwrap.dedent(
             f"""
             Eres un consultor experto. Con base en un diagnóstico tipo encuesta (escala 1–5), genera:
@@ -330,15 +327,10 @@ if categories:
     # Inserta gráfico interactivo en el HTML del reporte (sin depender de kaleido)
     fig_export = go.Figure(data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill='toself', name='Promedio')])
     fig_export.update_layout(
-        polar=dict(
-            radialaxis=dict(visible=True, range=[0,5], tickfont=dict(size=16)),
-            angularaxis=dict(tickfont=dict(size=18))
-        ),
+        polar=dict(radialaxis=dict(visible=True, range=[0,5])),
         showlegend=False,
         height=600,
-        margin=dict(t=60,b=60,l=60,r=60),
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=30, b=30, l=30, r=30),
     )
     radar_html = fig_export.to_html(full_html=False, include_plotlyjs='inline')
 
@@ -434,13 +426,13 @@ except Exception:
 if run_tests:
     def _sanity_df() -> pd.DataFrame:
         return pd.DataFrame({
-            "Categoría": ["Generación de Demanda (Inbound & ABM)", "Ecosistema de Contenidos", "Posicionamiento y Autoridad de Marca"],
+            "Categoría": ["A", "A", "B"],
             "Pregunta": ["P1", "P2", "P3"],
-            "Calificación": [3, 2, 5],
+            "Calificación": [5, 3, 4],
         })
 
     _df = _sanity_df()
     _summary = build_summary_text(_df)
     assert "Promedio general" in _summary, "El resumen debe incluir el promedio general"
-    assert "Generación de Demanda" in _summary, "Debe listar categorías reales"
+    assert "A:" in _summary and "B:" in _summary, "El resumen debe listar categorías A y B"
     st.info("✅ Sanity tests OK")
