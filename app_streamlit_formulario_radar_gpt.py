@@ -197,16 +197,16 @@ def build_summary_text(df: pd.DataFrame) -> str:
         lines.append(f"- {idx}: n={int(r['count'])}, promedio={r['mean']}")
     global_mean = df["Calificación"].mean().round(2)
     lines.append(f"Promedio general: {global_mean}")
-    return "
-".join(lines)
+    return "\n".join(lines)
 
 if st.button("Generar recomendaciones con GPT", key="btn_gpt_recos", use_container_width=True):
     try:
         summary = build_summary_text(df_plot)
         worst = df_plot.sort_values("Calificación").head(5)
-        worst_lines = [f"- ({r['Categoría']}) {r['Pregunta']} -> {r['Calificación']}" for _, r in worst.iterrows()]
-        worst_text = "
-".join(worst_lines)
+        worst_lines = [
+            f"- ({r['Categoría']}) {r['Pregunta']} -> {r['Calificación']}" for _, r in worst.iterrows()
+        ]
+        worst_text = "\n".join(worst_lines)
         prompt = textwrap.dedent(
             f"""
             Eres un consultor experto. Con base en un diagnóstico tipo encuesta (escala 1–5), genera:
@@ -395,3 +395,26 @@ if b64_logo_bottom:
         """,
         unsafe_allow_html=True,
     )
+
+# =============================
+# (Opcional) Pruebas de sanidad mínimas
+# Ejecuta estas pruebas solo si defines en secrets: RUN_SANITY_TESTS = true
+# =============================
+try:
+    run_tests = bool(st.secrets.get("RUN_SANITY_TESTS", False))
+except Exception:
+    run_tests = False
+
+if run_tests:
+    def _sanity_df() -> pd.DataFrame:
+        return pd.DataFrame({
+            "Categoría": ["A", "A", "B"],
+            "Pregunta": ["P1", "P2", "P3"],
+            "Calificación": [5, 3, 4],
+        })
+
+    _df = _sanity_df()
+    _summary = build_summary_text(_df)
+    assert "Promedio general" in _summary, "El resumen debe incluir el promedio general"
+    assert "A:" in _summary and "B:" in _summary, "El resumen debe listar categorías A y B"
+    st.info("✅ Sanity tests OK")
