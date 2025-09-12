@@ -38,6 +38,7 @@ b64_logo_top = _img_to_b64(logo_path_top)
 b64_logo_bottom = _img_to_b64(logo_path_bottom)
 b64_background = _img_to_b64(background_path)
 
+# Encabezado con logo centrado
 if b64_logo_top:
     st.markdown(
         f"""
@@ -49,12 +50,17 @@ if b64_logo_top:
         unsafe_allow_html=True,
     )
 
+# CSS seguro (escapando llaves) + fondo dinámico
+background_css = (
+    f"background-image: url('data:image/jpeg;base64,{b64_background}');" if b64_background else ""
+)
+
 custom_css = f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
 html, body, [class*="css"] {{ font-family: 'Montserrat', sans-serif !important; }}
 .stApp {{
-    background-image: url("data:image/jpeg;base64,{b64_background}") if {bool(b64_background)} else none;
+    {background_css}
     background-repeat: no-repeat; background-position: top center; background-size: auto; background-attachment: scroll;
 }}
 .stApp .main .block-container {{
