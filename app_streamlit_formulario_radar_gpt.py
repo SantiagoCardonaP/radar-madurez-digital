@@ -195,8 +195,7 @@ def build_summary_text(df: pd.DataFrame) -> str:
         lines.append(f"- {idx}: n={int(r['count'])}, promedio={r['mean']}")
     global_mean = df["Calificación"].mean().round(2)
     lines.append(f"Promedio general: {global_mean}")
-    return "
-".join(lines)
+    return "".join(lines)
 
 if st.button("Generar recomendaciones con GPT", key="btn_gpt_recos", use_container_width=True):
     try:
