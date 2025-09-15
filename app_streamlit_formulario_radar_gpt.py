@@ -83,7 +83,6 @@ st.markdown(custom_css, unsafe_allow_html=True)
 st.markdown("""
 <div style='position: relative; z-index: 1; padding-top: 20px; text-align:center;'>
   <h1>Radar de madurez digital</h1>
-  <h3>Evaluación 1–5 por pregunta y promedio por categoría</h3>
 </div>
 """, unsafe_allow_html=True)
 
