@@ -129,10 +129,10 @@ if st.session_state.df_form is None:
 df_form = st.session_state.df_form.copy()
 
 # Campo de empresa (persistente)
-st.markdown("### 0) Datos generales")
+st.markdown("### Datos generales")
 st.session_state.empresa = st.text_input("Nombre de la empresa", value=st.session_state.empresa, placeholder="Ej. ACME S.A.S.")
 
-st.markdown("### 1) Califica cada pregunta (1–5)")
+st.markdown("### Califica cada pregunta (1–5)")
 updated_scores = list(df_form["Calificación"].fillna(3).astype(int))
 
 with st.form("formulario_calificaciones", clear_on_submit=False):
@@ -173,7 +173,7 @@ def _wrap_label(text: str, max_len: int = 18) -> str:
         lines.append(" ".join(curr))
     return "<br>".join(lines)
 
-st.markdown("### 2) Radar de promedios por categoría")
+st.markdown("### Radar de promedios por categoría")
 radar_df = df_plot.groupby("Categoría", dropna=False)["Calificación"].mean().reset_index()
 categories = radar_df["Categoría"].tolist()
 values = radar_df["Calificación"].round(2).tolist()
@@ -205,7 +205,7 @@ else:
 # =============================
 # 3) ANÁLISIS CON GPT (recomendaciones y sugerencias)
 # =============================
-st.markdown("### 3) Análisis de resultados impulsado por IA")
+st.markdown("### Análisis de resultados impulsado por IA")
 
 def build_summary_text(df: pd.DataFrame) -> str:
     by_cat = df.groupby("Categoría")["Calificación"].agg(["count", "mean"]).round(2)
@@ -259,7 +259,7 @@ if st.session_state.gpt_analysis:
 # =============================
 # 4) Campo URL + Botón para analizar sitio con GPT (persistente)
 # =============================
-st.markdown("### 4) Análisis de sitio web (opcional)")
+st.markdown("### Análisis de sitio web (opcional)")
 st.session_state.site_url = st.text_input("Pega la URL del sitio web a analizar", value=st.session_state.site_url)
 
 def fetch_website_text(target_url: str, timeout: int = 15) -> str:
@@ -318,7 +318,7 @@ if st.session_state.site_analysis:
 # =============================
 # 5) DESCARGA DEL CONTENIDO COMPLETO EN HTML (formato más conveniente)
 # =============================
-st.markdown("### 5) Descargar reporte")
+st.markdown("### Descargar reporte")
 
 # Prepara fragmentos reutilizables para el HTML exportable
 radar_html = ""
