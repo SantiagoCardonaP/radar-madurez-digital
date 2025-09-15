@@ -206,7 +206,7 @@ else:
 # =============================
 # 3) ANÁLISIS CON GPT (recomendaciones y sugerencias)
 # =============================
-st.markdown("### 3) Análisis de resultados con IA")
+st.markdown("### 3) Análisis de resultados impulsado por IA")
 
 def build_summary_text(df: pd.DataFrame) -> str:
     by_cat = df.groupby("Categoría")["Calificación"].agg(["count", "mean"]).round(2)
@@ -217,7 +217,7 @@ def build_summary_text(df: pd.DataFrame) -> str:
     lines.append(f"Promedio general: {global_mean}")
     return "\n".join(lines)
 
-if st.button("Generar recomendaciones con GPT", key="btn_gpt_recos", use_container_width=True):
+if st.button("Generar recomendaciones", key="btn_gpt_recos", use_container_width=True):
     try:
         summary = build_summary_text(df_plot)
         worst = df_plot.sort_values("Calificación").head(5)
@@ -275,7 +275,7 @@ def fetch_website_text(target_url: str, timeout: int = 15) -> str:
     except Exception as ex:
         return f"[ERROR] No se pudo obtener el contenido: {ex}"
 
-if st.button("Analizar sitio con GPT", key="btn_gpt_site", use_container_width=True):
+if st.button("Analizar sitio", key="btn_gpt_site", use_container_width=True):
     if not st.session_state.site_url:
         st.warning("Por favor ingresa una URL válida.")
     else:
@@ -319,7 +319,7 @@ if st.session_state.site_analysis:
 # =============================
 # 5) DESCARGA DEL CONTENIDO COMPLETO EN HTML (formato más conveniente)
 # =============================
-st.markdown("### 5) Descargar reporte en HTML")
+st.markdown("### 5) Descargar reporte")
 
 # Prepara fragmentos reutilizables para el HTML exportable
 radar_html = ""
