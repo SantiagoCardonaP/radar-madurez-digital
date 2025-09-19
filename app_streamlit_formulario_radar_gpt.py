@@ -91,6 +91,12 @@ st.markdown("""
 # =============================
 if "empresa" not in st.session_state:
     st.session_state.empresa = ""
+if "nombre" not in st.session_state:
+    st.session_state.nombre = ""
+if "celular" not in st.session_state:
+    st.session_state.celular = ""
+if "ticket" not in st.session_state:
+    st.session_state.ticket = ""
 if "df_form" not in st.session_state:
     st.session_state.df_form = None
 if "gpt_analysis" not in st.session_state:
