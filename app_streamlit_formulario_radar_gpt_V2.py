@@ -12,22 +12,30 @@ from typing import Optional
 import textwrap
 from html import escape
 
+# --- Markdown→HTML (para el reporte). Fallback si no está instalado 'markdown' ---
+try:
+    import markdown as _md
+    def md_to_html(txt: str) -> str:
+        return _md.markdown(txt or "")
+except Exception:
+    def md_to_html(txt: str) -> str:
+        # Fallback simple: escapar y mantener saltos de línea
+        return "<p>" + (escape(txt or "").replace("\n", "<br>")) + "</p>"
+
 # =============================
 # CONFIGURACIÓN BÁSICA / ESTILO
 # =============================
 st.set_page_config(page_title="Diagnóstico & Recomendaciones con GPT", page_icon="📊", layout="centered")
 
-# === Cliente OpenAI (usa el mismo mecanismo que tu app actual) ===
-# Agrega tu API Key en .streamlit/secrets.toml -> OPENAI_API_KEY = "..."
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])  # mismo patrón que el proyecto original
+# === Cliente OpenAI ===
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# === Marca y estilos (reutiliza el look&feel del proyecto existente) ===
+# === Marca / assets ===
 logo_path_top = "logo-grupo-epm (1).png"
 logo_path_bottom = "logo-julius.png"
 background_path = "fondo-julius-epm.png"
 
 def img_to_b64(path: str) -> Optional[str]:
-    """Convierte una imagen a base64. Devuelve None si falla."""
     try:
         img = Image.open(path)
         buf = io.BytesIO()
@@ -53,11 +61,8 @@ if b64_logo_top:
         unsafe_allow_html=True,
     )
 
-# CSS seguro (escapando llaves) + fondo dinámico
-background_css = (
-    f"background-image: url('data:image/jpeg;base64,{b64_background}');" if b64_background else ""
-)
-
+# CSS y fondo dinámico
+background_css = (f"background-image: url('data:image/jpeg;base64,{b64_background}');" if b64_background else "")
 custom_css = f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
@@ -89,37 +94,25 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =============================
-# STATE SEGURO PARA NO PERDER NADA ENTRE CLICS
+# STATE
 # =============================
-if "empresa" not in st.session_state:
-    st.session_state.empresa = ""
-if "df_form" not in st.session_state:
-    st.session_state.df_form = None
-if "gpt_analysis" not in st.session_state:
-    st.session_state.gpt_analysis = None
-if "site_analysis" not in st.session_state:
-    st.session_state.site_analysis = None
-if "site_url" not in st.session_state:
-    st.session_state.site_url = ""
-if "habeas_aceptado" not in st.session_state:
-    st.session_state.habeas_aceptado = False
-if "nombre_persona" not in st.session_state:
-    st.session_state.nombre_persona = ""
-if "celular" not in st.session_state:
-    st.session_state.celular = ""
-if "ventas_mes" not in st.session_state:
-    st.session_state.ventas_mes = 0.0
+defaults = {
+    "empresa": "", "df_form": None, "gpt_analysis": None, "site_analysis": None, "site_url": "",
+    "habeas_aceptado": False, "nombre_persona": "", "celular": "", "ventas_mes": 0.0
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # =============================
-# 1) LECTURA DE FORMULARIO DESDE EXCEL Y UI DE CALIFICACIÓN + EMPRESA / DATOS
+# FORMULARIO XLSX
 # =============================
 @st.cache_data(show_spinner=False)
 def load_form(path: str = "Formulario.xlsx") -> pd.DataFrame:
     df = pd.read_excel(path, sheet_name="Formulario")
-    # Detecta columnas esperadas
-    categoria_col = next((df.columns[i] for i, c in enumerate(df.columns) if str(c).strip().lower().startswith("categor")), None)
-    pregunta_col = next((df.columns[i] for i, c in enumerate(df.columns) if str(c).strip().lower().startswith("pregun")), None)
-    calif_col    = next((df.columns[i] for i, c in enumerate(df.columns) if str(c).strip().lower().startswith("calif")), None)
+    categoria_col = next((c for c in df.columns if str(c).strip().lower().startswith("categor")), None)
+    pregunta_col = next((c for c in df.columns if str(c).strip().lower().startswith("pregun")), None)
+    calif_col    = next((c for c in df.columns if str(c).strip().lower().startswith("calif")), None)
     if not (categoria_col and pregunta_col):
         raise ValueError("La hoja 'Formulario' debe tener columnas 'Categoría' y 'Pregunta'.")
     if not calif_col:
@@ -128,7 +121,6 @@ def load_form(path: str = "Formulario.xlsx") -> pd.DataFrame:
     df = df.rename(columns={categoria_col: "Categoría", pregunta_col: "Pregunta", calif_col: "Calificación"})
     return df[["Categoría", "Pregunta", "Calificación"]]
 
-# Cargar DF en memoria de sesión una sola vez
 if st.session_state.df_form is None:
     try:
         st.session_state.df_form = load_form("Formulario.xlsx")
@@ -142,21 +134,13 @@ df_form = st.session_state.df_form.copy()
 # DATOS GENERALES + HABEAS DATA
 # =============================
 st.markdown("### Datos generales")
-cols = st.columns([1, 1])
-with cols[0]:
-    st.session_state.nombre_persona = st.text_input(
-        "Nombre", value=st.session_state.nombre_persona, placeholder="Ej. Juan Pérez"
-    )
-    st.session_state.celular = st.text_input(
-        "Celular", value=st.session_state.celular, placeholder="Ej. 3001234567"
-    )
-with cols[1]:
-    st.session_state.empresa = st.text_input(
-        "Nombre de la empresa", value=st.session_state.empresa, placeholder="Ej. ACME S.A.S."
-    )
-    st.session_state.ventas_mes = st.number_input(
-        "Promedio de ventas al mes", min_value=0.0, value=float(st.session_state.ventas_mes), step=100.0
-    )
+c1, c2 = st.columns([1, 1])
+with c1:
+    st.session_state.nombre_persona = st.text_input("Nombre", value=st.session_state.nombre_persona, placeholder="Ej. Juan Pérez")
+    st.session_state.celular = st.text_input("Celular", value=st.session_state.celular, placeholder="Ej. 3001234567")
+with c2:
+    st.session_state.empresa = st.text_input("Nombre de la empresa", value=st.session_state.empresa, placeholder="Ej. ACME S.A.S.")
+    st.session_state.ventas_mes = st.number_input("Promedio de ventas al mes", min_value=0.0, value=float(st.session_state.ventas_mes), step=100.0)
 
 st.session_state.habeas_aceptado = st.checkbox(
     "Autorizo el tratamiento de mis datos (Habeas Data).",
@@ -165,48 +149,35 @@ st.session_state.habeas_aceptado = st.checkbox(
 )
 
 # =============================
-# FORMULARIO DE CALIFICACIONES (escala 1–3)
+# CALIFICACIONES (1–3) + RADAR EN TIEMPO REAL
 # =============================
 st.markdown("### Califica cada pregunta (1–3)")
 st.caption("**1 = No · 2 = Parcialmente · 3 = Sí**")
 
-# Valor por defecto 2 (Parcialmente)
-updated_scores = list(df_form["Calificación"].fillna(2).clip(1, 3).astype(int))
+# Valor por defecto = 2
+initial_scores = list(df_form["Calificación"].fillna(2).clip(1, 3).astype(int))
 
 with st.form("formulario_calificaciones", clear_on_submit=False):
+    live_scores = initial_scores.copy()
     for i, row in df_form.iterrows():
-        with st.container():
-            st.markdown(f"**{row['Categoría']}** — {row['Pregunta']}")
-            val = st.slider(
-                " ",
-                min_value=1, max_value=3, step=1,
-                value=updated_scores[i],
-                key=f"slider_{i}"
-            )
-            updated_scores[i] = val
-            st.markdown("<div class='hint'>1=No · 2=Parcialmente · 3=Sí</div>", unsafe_allow_html=True)
-            st.markdown("<hr>", unsafe_allow_html=True)
-    submitted = st.form_submit_button(
-        "Guardar respuestas",
-        use_container_width=True,
-        disabled=not st.session_state.habeas_aceptado
-    )
+        st.markdown(f"**{row['Categoría']}** — {row['Pregunta']}")
+        val = st.slider(" ", min_value=1, max_value=3, step=1, value=live_scores[i], key=f"slider_{i}")
+        live_scores[i] = val
+        st.markdown("<div class='hint'>1=No · 2=Parcialmente · 3=Sí</div>", unsafe_allow_html=True)
+        st.markdown("<hr>", unsafe_allow_html=True)
+    submitted = st.form_submit_button("Guardar respuestas", use_container_width=True, disabled=not st.session_state.habeas_aceptado)
+
+# --- DF para cálculos SIEMPRE reflejando el estado actual de los sliders (aunque no se haya pulsado Guardar) ---
+df_calc = df_form.copy()
+for i in range(len(df_calc)):
+    df_calc.at[df_calc.index[i], "Calificación"] = st.session_state.get(f"slider_{i}", initial_scores[i])
+df_calc["Calificación"] = df_calc["Calificación"].astype(float)
 
 if submitted:
-    df_form["Calificación"] = updated_scores
-    st.session_state.df_form = df_form  # persistir en sesión
+    st.session_state.df_form = df_calc.copy()
     st.success("¡Respuestas guardadas en la sesión!")
 
-# DF que usaremos para cálculos/gráficas
-df_plot = st.session_state.df_form.copy()
-if df_plot["Calificación"].isna().any():
-    df_plot["Calificación"] = df_plot["Calificación"].fillna(2)
-
-# =============================
-# 2) GRÁFICO RADAR (promedio por categoría) - SIN FONDO NEGRO, AJUSTE ETIQUETAS
-# =============================
 def _wrap_label(text: str, max_len: int = 18) -> str:
-    """Inserta saltos de línea <br> para que las etiquetas largas quepan."""
     words = str(text).split()
     lines, curr = [], []
     for w in words:
@@ -220,7 +191,7 @@ def _wrap_label(text: str, max_len: int = 18) -> str:
     return "<br>".join(lines) if lines else str(text)
 
 st.markdown("### 2) Radar de promedios por categoría")
-radar_df = df_plot.groupby("Categoría", dropna=False)["Calificación"].mean().reset_index()
+radar_df = df_calc.groupby("Categoría", dropna=False)["Calificación"].mean().reset_index()
 categories = radar_df["Categoría"].tolist()
 values = radar_df["Calificación"].round(2).tolist()
 
@@ -229,9 +200,7 @@ categories_closed = wrapped + [wrapped[0]] if wrapped else []
 values_closed = values + [values[0]] if values else []
 
 if wrapped:
-    fig = go.Figure(
-        data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill="toself", name="Promedio")]
-    )
+    fig = go.Figure(data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill="toself", name="Promedio")])
     fig.update_layout(
         polar=dict(
             radialaxis=dict(visible=True, range=[0, 3], tickfont=dict(size=16)),
@@ -240,8 +209,8 @@ if wrapped:
         font=dict(size=18),
         showlegend=False,
         margin=dict(t=60, b=60, l=60, r=60),
-        height=600,  # un poco más pequeño
-        paper_bgcolor="rgba(0,0,0,0)",  # sin fondo negro
+        height=600,
+        paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
     st.plotly_chart(fig, use_container_width=True, theme=None)
@@ -249,7 +218,7 @@ else:
     st.info("No hay categorías para graficar.")
 
 # =============================
-# 3) ANÁLISIS CON GPT (solo 3 secciones)
+# ANÁLISIS CON GPT (solo 3 secciones) – en Markdown dentro de la APP
 # =============================
 st.markdown("### 3) Análisis de resultados con IA")
 
@@ -260,7 +229,6 @@ def build_summary_text(df: pd.DataFrame) -> str:
         lines.append(f"- {idx}: n={int(r['count'])}, promedio={r['mean']}")
     global_mean = df["Calificación"].mean().round(2)
     lines.append(f"Promedio general: {global_mean}")
-    # Datos generales adicionales
     lines.append(f"Nombre: {st.session_state.nombre_persona or 'N/D'}")
     lines.append(f"Celular: {st.session_state.celular or 'N/D'}")
     lines.append(f"Promedio de ventas/mes: {st.session_state.ventas_mes}")
@@ -268,11 +236,9 @@ def build_summary_text(df: pd.DataFrame) -> str:
 
 if st.button("Generar recomendaciones", key="btn_gpt_recos", use_container_width=True, disabled=not st.session_state.habeas_aceptado):
     try:
-        summary = build_summary_text(df_plot)
-        worst = df_plot.sort_values("Calificación").head(5)
-        worst_lines = [
-            f"- ({r['Categoría']}) {r['Pregunta']} -> {r['Calificación']}" for _, r in worst.iterrows()
-        ]
+        summary = build_summary_text(df_calc)
+        worst = df_calc.sort_values("Calificación").head(5)
+        worst_lines = [f"- ({r['Categoría']}) {r['Pregunta']} -> {r['Calificación']}" for _, r in worst.iterrows()]
         worst_text = "\n".join(worst_lines)
         prompt = textwrap.dedent(
             f"""
@@ -299,13 +265,13 @@ if st.button("Generar recomendaciones", key="btn_gpt_recos", use_container_width
     except Exception as e:
         st.error(f"Error al generar análisis: {e}")
 
-# Mostrar siempre si existe en sesión (texto plano, NO markdown)
+# Mostrar SIEMPRE (Markdown dentro de la app)
 if st.session_state.gpt_analysis:
     st.markdown("#### Informe de IA")
-    st.text(st.session_state.gpt_analysis)
+    st.markdown(st.session_state.gpt_analysis)
 
 # =============================
-# 4) Campo URL + Botón para analizar sitio con GPT (persistente)
+# Análisis de sitio
 # =============================
 st.markdown("### 4) Análisis de sitio web (opcional)")
 st.session_state.site_url = st.text_input("Pega la URL del sitio web a analizar", value=st.session_state.site_url)
@@ -358,17 +324,17 @@ if st.button("Analizar sitio con GPT", key="btn_gpt_site", use_container_width=T
             except Exception as e:
                 st.error(f"No fue posible analizar el sitio: {e}")
 
-# Mostrar siempre si existe en sesión (texto plano)
+# En la app lo dejamos en texto plano (o cámbialo a markdown si lo prefieres)
 if st.session_state.site_analysis:
     st.markdown("#### Hallazgos del sitio")
     st.text(st.session_state.site_analysis)
 
 # =============================
-# 5) DESCARGA DEL CONTENIDO COMPLETO EN HTML (formato más conveniente)
+# 5) DESCARGA DEL CONTENIDO EN HTML (análisis convertidos a HTML)
 # =============================
 st.markdown("### 5) Descargar reporte en HTML")
 
-# Prepara fragmentos reutilizables para el HTML exportable
+# Radar exportable (misma escala 0–3 y etiquetas envueltas)
 radar_html = ""
 if wrapped:
     fig_export = go.Figure(data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill='toself', name='Promedio')])
@@ -385,16 +351,16 @@ if wrapped:
     )
     radar_html = fig_export.to_html(full_html=False, include_plotlyjs='inline')
 
-# Tabla de respuestas bonita
+# Tabla con los valores ACTUALES (df_calc)
 styled_table = (
-    st.session_state.df_form.copy()
+    df_calc.copy()
     .assign(Calificación=lambda d: d["Calificación"].fillna("").astype(str))
     .to_html(index=False, classes="table", border=0)
 )
 
-# Escapar análisis para que NO se renderice como markdown/HTML
-analysis_html = escape(st.session_state.gpt_analysis or "Aún no generado.")
-site_html = escape(st.session_state.site_analysis or "Aún no generado.")
+# CONVERSIÓN a HTML (NO markdown) para el reporte
+analysis_html = md_to_html(st.session_state.gpt_analysis or "Aún no generado.")
+site_html = md_to_html(st.session_state.site_analysis or "Aún no generado.")
 
 html_css = """
 <style>
@@ -405,7 +371,6 @@ h1, h2, h3 { color: #240531; }
 .table th { background:#ff5722; color:#fff; padding:8px; text-align:left; }
 .table td { background:#ffffff; border:1px solid #eee; padding:8px; vertical-align: top; }
 .section { background:#fff; border:1px solid #eee; border-radius:12px; padding:16px; margin-bottom:16px; }
-pre { white-space: pre-wrap; word-wrap: break-word; }
 </style>
 """
 
@@ -441,13 +406,13 @@ report_html = f"""
 
 <div class='section'>
   <h2>Informe de IA</h2>
-  <pre>{analysis_html}</pre>
+  {analysis_html}
 </div>
 
 <div class='section'>
   <h2>Hallazgos del sitio</h2>
   <p><strong>URL:</strong> {escape(st.session_state.site_url or 'N/D')}</p>
-  <pre>{site_html}</pre>
+  {site_html}
 </div>
 
 <footer>
@@ -477,26 +442,3 @@ if b64_logo_bottom:
         """,
         unsafe_allow_html=True,
     )
-
-# =============================
-# (Opcional) Pruebas de sanidad mínimas
-# Ejecuta estas pruebas solo si defines en secrets: RUN_SANITY_TESTS = true
-# =============================
-try:
-    run_tests = bool(st.secrets.get("RUN_SANITY_TESTS", False))
-except Exception:
-    run_tests = False
-
-if run_tests:
-    def _sanity_df() -> pd.DataFrame:
-        return pd.DataFrame({
-            "Categoría": ["Generación de Demanda (Inbound & ABM)", "Ecosistema de Contenidos", "Posicionamiento y Autoridad de Marca"],
-            "Pregunta": ["P1", "P2", "P3"],
-            "Calificación": [3, 2, 1],
-        })
-
-    _df = _sanity_df()
-    _summary = build_summary_text(_df)
-    assert "Promedio general" in _summary, "El resumen debe incluir el promedio general"
-    assert "Generación de Demanda" in _summary, "Debe listar categorías reales"
-    st.info("✅ Sanity tests OK")
