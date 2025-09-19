@@ -91,12 +91,6 @@ st.markdown("""
 # =============================
 if "empresa" not in st.session_state:
     st.session_state.empresa = ""
-if "nombre" not in st.session_state:
-    st.session_state.nombre = ""
-if "celular" not in st.session_state:
-    st.session_state.celular = ""
-if "ticket" not in st.session_state:
-    st.session_state.ticket = ""
 if "df_form" not in st.session_state:
     st.session_state.df_form = None
 if "gpt_analysis" not in st.session_state:
@@ -134,12 +128,9 @@ if st.session_state.df_form is None:
 
 df_form = st.session_state.df_form.copy()
 
-# Campos de datos personales (persistente)
+# Campo de empresa (persistente)
 st.markdown("### Datos generales")
-st.session_state.persona = st.text_input("Nombre de quien diligencia el formulario", value=st.session_state.persona, placeholder="Ej. Beatriz Muñoz")
-st.session_state.celular = st.text_input("Número de celular", value=st.session_state.celular, placeholder="Ej. 311300300")
 st.session_state.empresa = st.text_input("Nombre de la empresa", value=st.session_state.empresa, placeholder="Ej. ACME S.A.S.")
-st.session_state.ticket = st.text_input("Promedio de ventas al mes", value=st.session_state.ticket, placeholder="Ej. 10.000.000")
 
 st.markdown("### Califica cada pregunta (1–5)")
 updated_scores = list(df_form["Calificación"].fillna(3).astype(int))
@@ -372,10 +363,7 @@ report_html = f"""
 </head>
 <body>
 <h1>Reporte de Diagnóstico</h1>
-<p class='badge'>Nombre: {st.session_state.nombre or 'N/A'}</p>
-<p class='badge'>Celular: {st.session_state.celular or 'N/A'}</p>
 <p class='badge'>Empresa: {st.session_state.empresa or 'N/A'}</p>
-<p class='badge'>Promedio de ventas al mes: {st.session_state.ticket or 'N/A'}</p>
 
 <div class='section'>
   <h2>Respuestas por pregunta</h2>
