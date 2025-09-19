@@ -1,0 +1,502 @@
+import streamlit as st
+from openai import OpenAI
+import pandas as pd
+import numpy as np
+import base64
+import io
+import requests
+from bs4 import BeautifulSoup
+from PIL import Image
+import plotly.graph_objects as go
+from typing import Optional
+import textwrap
+from html import escape
+
+# =============================
+# CONFIGURACIÓN BÁSICA / ESTILO
+# =============================
+st.set_page_config(page_title="Diagnóstico & Recomendaciones con GPT", page_icon="📊", layout="centered")
+
+# === Cliente OpenAI (usa el mismo mecanismo que tu app actual) ===
+# Agrega tu API Key en .streamlit/secrets.toml -> OPENAI_API_KEY = "..."
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])  # mismo patrón que el proyecto original
+
+# === Marca y estilos (reutiliza el look&feel del proyecto existente) ===
+logo_path_top = "logo-grupo-epm (1).png"
+logo_path_bottom = "logo-julius.png"
+background_path = "fondo-julius-epm.png"
+
+def img_to_b64(path: str) -> Optional[str]:
+    """Convierte una imagen a base64. Devuelve None si falla."""
+    try:
+        img = Image.open(path)
+        buf = io.BytesIO()
+        fmt = "PNG" if path.lower().endswith("png") else "JPEG"
+        img.save(buf, format=fmt)
+        return base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return None
+
+b64_logo_top = img_to_b64(logo_path_top)
+b64_logo_bottom = img_to_b64(logo_path_bottom)
+b64_background = img_to_b64(background_path)
+
+# Encabezado con logo centrado
+if b64_logo_top:
+    st.markdown(
+        f"""
+        <div style='position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999;'>
+            <img src="data:image/png;base64,{b64_logo_top}" width="233px"/>
+        </div>
+        <div style='margin-top: 220px;'></div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# CSS seguro (escapando llaves) + fondo dinámico
+background_css = (
+    f"background-image: url('data:image/jpeg;base64,{b64_background}');" if b64_background else ""
+)
+
+custom_css = f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
+html, body, [class*="css"] {{ font-family: 'Montserrat', sans-serif !important; }}
+.stApp {{
+    {background_css}
+    background-repeat: no-repeat; background-position: top center; background-size: auto; background-attachment: scroll;
+}}
+.stApp .main .block-container {{
+    background-image: linear-gradient(to bottom, transparent 330px, #240531 330px) !important;
+    background-repeat: no-repeat !important; background-size: 100% 100% !important;
+    border-radius: 20px !important; padding: 50px !important; max-width: 1200px !important; margin: 2rem auto !important;
+}}
+label, .stSelectbox label, .stMultiSelect label {{ color: white !important; font-size: 1.05em; }}
+:root {{ --brand: #ff5722; }}
+div.stButton > button {{ background-color: var(--brand); color: #ffffff !important; font-weight: 700; font-size: 16px; padding: 12px 24px; border-radius: 50px; border: none; width: 100%; margin-top: 10px; }}
+div.stButton > button:hover {{ background-color: #e64a19; color:#4B006E !important; }}
+.block {{ background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 18px; margin-bottom: 14px; }}
+.hint {{ color:#ddd; font-size: 12px; margin-top: -6px; }}
+</style>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
+
+st.markdown("""
+<div style='position: relative; z-index: 1; padding-top: 20px; text-align:center;'>
+  <h1>Diagnóstico tipo formulario + Radar + Recomendaciones con IA</h1>
+  <h3>Evaluación 1–3 por pregunta y promedio por categoría</h3>
+</div>
+""", unsafe_allow_html=True)
+
+# =============================
+# STATE SEGURO PARA NO PERDER NADA ENTRE CLICS
+# =============================
+if "empresa" not in st.session_state:
+    st.session_state.empresa = ""
+if "df_form" not in st.session_state:
+    st.session_state.df_form = None
+if "gpt_analysis" not in st.session_state:
+    st.session_state.gpt_analysis = None
+if "site_analysis" not in st.session_state:
+    st.session_state.site_analysis = None
+if "site_url" not in st.session_state:
+    st.session_state.site_url = ""
+if "habeas_aceptado" not in st.session_state:
+    st.session_state.habeas_aceptado = False
+if "nombre_persona" not in st.session_state:
+    st.session_state.nombre_persona = ""
+if "celular" not in st.session_state:
+    st.session_state.celular = ""
+if "ventas_mes" not in st.session_state:
+    st.session_state.ventas_mes = 0.0
+
+# =============================
+# 1) LECTURA DE FORMULARIO DESDE EXCEL Y UI DE CALIFICACIÓN + EMPRESA / DATOS
+# =============================
+@st.cache_data(show_spinner=False)
+def load_form(path: str = "Formulario.xlsx") -> pd.DataFrame:
+    df = pd.read_excel(path, sheet_name="Formulario")
+    # Detecta columnas esperadas
+    categoria_col = next((df.columns[i] for i, c in enumerate(df.columns) if str(c).strip().lower().startswith("categor")), None)
+    pregunta_col = next((df.columns[i] for i, c in enumerate(df.columns) if str(c).strip().lower().startswith("pregun")), None)
+    calif_col    = next((df.columns[i] for i, c in enumerate(df.columns) if str(c).strip().lower().startswith("calif")), None)
+    if not (categoria_col and pregunta_col):
+        raise ValueError("La hoja 'Formulario' debe tener columnas 'Categoría' y 'Pregunta'.")
+    if not calif_col:
+        df["Calificación"] = np.nan
+        calif_col = "Calificación"
+    df = df.rename(columns={categoria_col: "Categoría", pregunta_col: "Pregunta", calif_col: "Calificación"})
+    return df[["Categoría", "Pregunta", "Calificación"]]
+
+# Cargar DF en memoria de sesión una sola vez
+if st.session_state.df_form is None:
+    try:
+        st.session_state.df_form = load_form("Formulario.xlsx")
+    except Exception as e:
+        st.error(f"No se pudo cargar 'Formulario.xlsx'. Detalle: {e}")
+        st.stop()
+
+df_form = st.session_state.df_form.copy()
+
+# =============================
+# DATOS GENERALES + HABEAS DATA
+# =============================
+st.markdown("### Datos generales")
+cols = st.columns([1, 1])
+with cols[0]:
+    st.session_state.nombre_persona = st.text_input(
+        "Nombre", value=st.session_state.nombre_persona, placeholder="Ej. Juan Pérez"
+    )
+    st.session_state.celular = st.text_input(
+        "Celular", value=st.session_state.celular, placeholder="Ej. 3001234567"
+    )
+with cols[1]:
+    st.session_state.empresa = st.text_input(
+        "Nombre de la empresa", value=st.session_state.empresa, placeholder="Ej. ACME S.A.S."
+    )
+    st.session_state.ventas_mes = st.number_input(
+        "Promedio de ventas al mes", min_value=0.0, value=float(st.session_state.ventas_mes), step=100.0
+    )
+
+st.session_state.habeas_aceptado = st.checkbox(
+    "Autorizo el tratamiento de mis datos (Habeas Data).",
+    value=st.session_state.habeas_aceptado,
+    help="Acepto que la información suministrada sea usada para análisis y recomendaciones."
+)
+
+# =============================
+# FORMULARIO DE CALIFICACIONES (escala 1–3)
+# =============================
+st.markdown("### Califica cada pregunta (1–3)")
+st.caption("**1 = No · 2 = Parcialmente · 3 = Sí**")
+
+# Valor por defecto 2 (Parcialmente)
+updated_scores = list(df_form["Calificación"].fillna(2).clip(1, 3).astype(int))
+
+with st.form("formulario_calificaciones", clear_on_submit=False):
+    for i, row in df_form.iterrows():
+        with st.container():
+            st.markdown(f"**{row['Categoría']}** — {row['Pregunta']}")
+            val = st.slider(
+                " ",
+                min_value=1, max_value=3, step=1,
+                value=updated_scores[i],
+                key=f"slider_{i}"
+            )
+            updated_scores[i] = val
+            st.markdown("<div class='hint'>1=No · 2=Parcialmente · 3=Sí</div>", unsafe_allow_html=True)
+            st.markdown("<hr>", unsafe_allow_html=True)
+    submitted = st.form_submit_button(
+        "Guardar respuestas",
+        use_container_width=True,
+        disabled=not st.session_state.habeas_aceptado
+    )
+
+if submitted:
+    df_form["Calificación"] = updated_scores
+    st.session_state.df_form = df_form  # persistir en sesión
+    st.success("¡Respuestas guardadas en la sesión!")
+
+# DF que usaremos para cálculos/gráficas
+df_plot = st.session_state.df_form.copy()
+if df_plot["Calificación"].isna().any():
+    df_plot["Calificación"] = df_plot["Calificación"].fillna(2)
+
+# =============================
+# 2) GRÁFICO RADAR (promedio por categoría) - SIN FONDO NEGRO, AJUSTE ETIQUETAS
+# =============================
+def _wrap_label(text: str, max_len: int = 18) -> str:
+    """Inserta saltos de línea <br> para que las etiquetas largas quepan."""
+    words = str(text).split()
+    lines, curr = [], []
+    for w in words:
+        if sum(len(x) for x in curr) + len(curr) + len(w) <= max_len:
+            curr.append(w)
+        else:
+            lines.append(" ".join(curr))
+            curr = [w]
+    if curr:
+        lines.append(" ".join(curr))
+    return "<br>".join(lines) if lines else str(text)
+
+st.markdown("### 2) Radar de promedios por categoría")
+radar_df = df_plot.groupby("Categoría", dropna=False)["Calificación"].mean().reset_index()
+categories = radar_df["Categoría"].tolist()
+values = radar_df["Calificación"].round(2).tolist()
+
+wrapped = [_wrap_label(c, 18) for c in categories]
+categories_closed = wrapped + [wrapped[0]] if wrapped else []
+values_closed = values + [values[0]] if values else []
+
+if wrapped:
+    fig = go.Figure(
+        data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill="toself", name="Promedio")]
+    )
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 3], tickfont=dict(size=16)),
+            angularaxis=dict(tickfont=dict(size=18)),
+        ),
+        font=dict(size=18),
+        showlegend=False,
+        margin=dict(t=60, b=60, l=60, r=60),
+        height=600,  # un poco más pequeño
+        paper_bgcolor="rgba(0,0,0,0)",  # sin fondo negro
+        plot_bgcolor="rgba(0,0,0,0)",
+    )
+    st.plotly_chart(fig, use_container_width=True, theme=None)
+else:
+    st.info("No hay categorías para graficar.")
+
+# =============================
+# 3) ANÁLISIS CON GPT (solo 3 secciones)
+# =============================
+st.markdown("### 3) Análisis de resultados con IA")
+
+def build_summary_text(df: pd.DataFrame) -> str:
+    by_cat = df.groupby("Categoría")["Calificación"].agg(["count", "mean"]).round(2)
+    lines = [f"Empresa: {st.session_state.empresa or 'N/A'}", "Resumen por categoría:"]
+    for idx, r in by_cat.iterrows():
+        lines.append(f"- {idx}: n={int(r['count'])}, promedio={r['mean']}")
+    global_mean = df["Calificación"].mean().round(2)
+    lines.append(f"Promedio general: {global_mean}")
+    # Datos generales adicionales
+    lines.append(f"Nombre: {st.session_state.nombre_persona or 'N/D'}")
+    lines.append(f"Celular: {st.session_state.celular or 'N/D'}")
+    lines.append(f"Promedio de ventas/mes: {st.session_state.ventas_mes}")
+    return "\n".join(lines)
+
+if st.button("Generar recomendaciones", key="btn_gpt_recos", use_container_width=True, disabled=not st.session_state.habeas_aceptado):
+    try:
+        summary = build_summary_text(df_plot)
+        worst = df_plot.sort_values("Calificación").head(5)
+        worst_lines = [
+            f"- ({r['Categoría']}) {r['Pregunta']} -> {r['Calificación']}" for _, r in worst.iterrows()
+        ]
+        worst_text = "\n".join(worst_lines)
+        prompt = textwrap.dedent(
+            f"""
+            Eres un consultor experto. Con base en el diagnóstico (escala 1–3: 1=No, 2=Parcialmente, 3=Sí), entrega SOLO:
+            1) Hallazgos clave (máx. 6 bullets)
+            2) Recomendaciones accionables priorizadas (3–5 ítems; justifica prioridad)
+            3) Riesgos si no se actúa (máx. 5)
+
+            Contexto cuantitativo:
+            {summary}
+
+            Preguntas con peores puntajes:
+            {worst_text}
+            """
+        ).strip()
+        with st.spinner("Analizando…"):
+            resp = client.chat.completions.create(
+                model="gpt-4o",
+                temperature=0.2,
+                messages=[{"role": "user", "content": prompt}],
+            )
+        st.session_state.gpt_analysis = resp.choices[0].message.content
+        st.success("Informe de IA generado.")
+    except Exception as e:
+        st.error(f"Error al generar análisis: {e}")
+
+# Mostrar siempre si existe en sesión (texto plano, NO markdown)
+if st.session_state.gpt_analysis:
+    st.markdown("#### Informe de IA")
+    st.text(st.session_state.gpt_analysis)
+
+# =============================
+# 4) Campo URL + Botón para analizar sitio con GPT (persistente)
+# =============================
+st.markdown("### 4) Análisis de sitio web (opcional)")
+st.session_state.site_url = st.text_input("Pega la URL del sitio web a analizar", value=st.session_state.site_url)
+
+def fetch_website_text(target_url: str, timeout: int = 15) -> str:
+    try:
+        r = requests.get(target_url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+        for tag in soup(["script", "style", "noscript"]):
+            tag.decompose()
+        text = " ".join(soup.get_text(separator=" ").split())
+        return text[:8000]
+    except Exception as ex:
+        return f"[ERROR] No se pudo obtener el contenido: {ex}"
+
+if st.button("Analizar sitio con GPT", key="btn_gpt_site", use_container_width=True, disabled=not st.session_state.habeas_aceptado):
+    if not st.session_state.site_url:
+        st.warning("Por favor ingresa una URL válida.")
+    else:
+        raw_site_text = fetch_website_text(st.session_state.site_url)
+        base_analysis = st.session_state.gpt_analysis or "(Aún no hay análisis base. Usa el botón del paso 3.)"
+        prompt_site = textwrap.dedent(
+            f"""
+            Eres un consultor digital. Toma el diagnóstico cuantitativo y cualitativo previo y contrástalo con el contenido del sitio.
+            Entrega:
+            - Señales de alineación/desalineación entre el diagnóstico y el sitio.
+            - Recomendaciones de UX, contenido y confianza (trust signals).
+            - 5 acciones web priorizadas (impacto vs. esfuerzo).
+
+            [Empresa]
+            {st.session_state.empresa or 'N/A'}
+
+            [Diagnóstico IA previo]
+            {base_analysis}
+
+            [Contenido del sitio]
+            {raw_site_text}
+            """
+        ).strip()
+        with st.spinner("Analizando el sitio…"):
+            try:
+                resp2 = client.chat.completions.create(
+                    model="gpt-4o",
+                    temperature=0.2,
+                    messages=[{"role": "user", "content": prompt_site}],
+                )
+                st.session_state.site_analysis = resp2.choices[0].message.content
+                st.success("Análisis del sitio generado.")
+            except Exception as e:
+                st.error(f"No fue posible analizar el sitio: {e}")
+
+# Mostrar siempre si existe en sesión (texto plano)
+if st.session_state.site_analysis:
+    st.markdown("#### Hallazgos del sitio")
+    st.text(st.session_state.site_analysis)
+
+# =============================
+# 5) DESCARGA DEL CONTENIDO COMPLETO EN HTML (formato más conveniente)
+# =============================
+st.markdown("### 5) Descargar reporte en HTML")
+
+# Prepara fragmentos reutilizables para el HTML exportable
+radar_html = ""
+if wrapped:
+    fig_export = go.Figure(data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill='toself', name='Promedio')])
+    fig_export.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 3]),
+            angularaxis=dict(tickfont=dict(size=18)),
+        ),
+        showlegend=False,
+        height=600,
+        margin=dict(t=60, b=60, l=60, r=60),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+    )
+    radar_html = fig_export.to_html(full_html=False, include_plotlyjs='inline')
+
+# Tabla de respuestas bonita
+styled_table = (
+    st.session_state.df_form.copy()
+    .assign(Calificación=lambda d: d["Calificación"].fillna("").astype(str))
+    .to_html(index=False, classes="table", border=0)
+)
+
+# Escapar análisis para que NO se renderice como markdown/HTML
+analysis_html = escape(st.session_state.gpt_analysis or "Aún no generado.")
+site_html = escape(st.session_state.site_analysis or "Aún no generado.")
+
+html_css = """
+<style>
+body { font-family: Montserrat, Arial, sans-serif; padding: 24px; background: #f8f5fb; }
+h1, h2, h3 { color: #240531; }
+.badge { display:inline-block; background:#ff5722; color:white; padding:6px 12px; border-radius:16px; font-weight:700; }
+.table { width:100%; border-collapse: collapse; }
+.table th { background:#ff5722; color:#fff; padding:8px; text-align:left; }
+.table td { background:#ffffff; border:1px solid #eee; padding:8px; vertical-align: top; }
+.section { background:#fff; border:1px solid #eee; border-radius:12px; padding:16px; margin-bottom:16px; }
+pre { white-space: pre-wrap; word-wrap: break-word; }
+</style>
+"""
+
+report_html = f"""
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+<meta charset='utf-8'>
+<title>Reporte Diagnóstico</title>
+{html_css}
+</head>
+<body>
+<h1>Reporte de Diagnóstico</h1>
+
+<div class='section'>
+  <h2>Datos generales</h2>
+  <p><strong>Nombre:</strong> {escape(st.session_state.nombre_persona or 'N/D')}</p>
+  <p><strong>Celular:</strong> {escape(st.session_state.celular or 'N/D')}</p>
+  <p><strong>Empresa:</strong> {escape(st.session_state.empresa or 'N/D')}</p>
+  <p><strong>Promedio de ventas/mes:</strong> {st.session_state.ventas_mes}</p>
+  <p><strong>Habeas data aceptado:</strong> {"Sí" if st.session_state.habeas_aceptado else "No"}</p>
+</div>
+
+<div class='section'>
+  <h2>Respuestas por pregunta</h2>
+  {styled_table}
+</div>
+
+<div class='section'>
+  <h2>Radar de promedios por categoría</h2>
+  {radar_html}
+</div>
+
+<div class='section'>
+  <h2>Informe de IA</h2>
+  <pre>{analysis_html}</pre>
+</div>
+
+<div class='section'>
+  <h2>Hallazgos del sitio</h2>
+  <p><strong>URL:</strong> {escape(st.session_state.site_url or 'N/D')}</p>
+  <pre>{site_html}</pre>
+</div>
+
+<footer>
+  <p style='color:#666'>Reporte generado automáticamente.</p>
+</footer>
+</body>
+</html>
+"""
+
+html_bytes = report_html.encode("utf-8")
+st.download_button(
+    label="Descargar reporte (HTML)",
+    data=html_bytes,
+    file_name="diagnostico_reporte.html",
+    mime="text/html",
+    use_container_width=True,
+    disabled=not st.session_state.habeas_aceptado
+)
+
+# === Footer brand ===
+if b64_logo_bottom:
+    st.markdown(
+        f"""
+        <div style='display: flex; justify-content: center; align-items: center; margin-top: 60px; margin-bottom: 40px;'>
+            <img src="data:image/png;base64,{b64_logo_bottom}" width="96" height="69"/>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# =============================
+# (Opcional) Pruebas de sanidad mínimas
+# Ejecuta estas pruebas solo si defines en secrets: RUN_SANITY_TESTS = true
+# =============================
+try:
+    run_tests = bool(st.secrets.get("RUN_SANITY_TESTS", False))
+except Exception:
+    run_tests = False
+
+if run_tests:
+    def _sanity_df() -> pd.DataFrame:
+        return pd.DataFrame({
+            "Categoría": ["Generación de Demanda (Inbound & ABM)", "Ecosistema de Contenidos", "Posicionamiento y Autoridad de Marca"],
+            "Pregunta": ["P1", "P2", "P3"],
+            "Calificación": [3, 2, 1],
+        })
+
+    _df = _sanity_df()
+    _summary = build_summary_text(_df)
+    assert "Promedio general" in _summary, "El resumen debe incluir el promedio general"
+    assert "Generación de Demanda" in _summary, "Debe listar categorías reales"
+    st.info("✅ Sanity tests OK")
