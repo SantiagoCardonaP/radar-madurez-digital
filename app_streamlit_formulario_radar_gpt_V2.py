@@ -538,7 +538,7 @@ if clicked and st.session_state.habeas_aceptado:
     _send_backup_to_apps_script(html_bytes, filename)
 
 # Envío por email
-dest_por_defecto = st.secrets.get("REPORT_EMAIL_TO", "")
+dest_por_defecto = st.secrets.get("")
 to_input = st.text_input("Escribe el email donde llegará el reporte", value=dest_por_defecto)
 
 if st.button("Enviar reporte por correo", use_container_width=True, disabled=not st.session_state.habeas_aceptado):
