@@ -106,7 +106,7 @@ def send_report_email_via_apps_script(html_bytes: bytes, filename: str,
             "email": {
                 "to": [s.strip() for s in to_csv.split(",") if s.strip()],
                 "subject": subject or f"Reporte diagnóstico - {st.session_state.empresa or 'Empresa'}",
-                "htmlBody": html_body or "<p>Buenos días, se adjunta el reporte de madurez digital. Saludos</p>",
+                "htmlBody": html_body or "<p>Hola, te saludamos de JULIUS 2 Grow - Aquí va tu radar de madurez digital. Debes descargar el archivo HTML y abrirlo con el navegador.</p>",
                 # puedes agregar "cc": "", "bcc": ""
             }
         }
@@ -296,10 +296,14 @@ categories_closed = wrapped + [wrapped[0]] if wrapped else []
 values_closed = values + [values[0]] if values else []
 
 if wrapped:
-    fig = go.Figure(data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill="toself", name="Promedio")])
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 3], tickfont=dict(size=16)),
+            radialaxis=dict(
+                visible=True,
+                range=[0, 3],
+                showticklabels=False,  # ← quita los números del eje radial
+                ticks=''               # ← sin marcas de tick
+            ),
             angularaxis=dict(tickfont=dict(size=18)),
         ),
         font=dict(size=18),
@@ -309,7 +313,14 @@ if wrapped:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
-    st.plotly_chart(fig, use_container_width=True, theme=None)
+    
+    # Bloquear zoom/drag y ocultar la barra de herramientas
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        theme=None,
+        config={"staticPlot": True, "displayModeBar": False}
+    )
 else:
     st.info("No hay categorías para graficar.")
 
