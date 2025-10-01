@@ -357,13 +357,13 @@ if st.button("Generar recomendaciones", key="btn_gpt_recos", use_container_width
                 messages=[{"role": "user", "content": prompt}],
             )
         st.session_state.gpt_analysis = resp.choices[0].message.content
-        st.success("Informe de IA generado.")
+        st.success("Informe generado.")
     except Exception as e:
         st.error(f"Error al generar análisis: {e}")
 
 # Mostrar SIEMPRE (Markdown dentro de la app)
 if st.session_state.gpt_analysis:
-    st.markdown("#### Informe de IA")
+    st.markdown("#### Informe")
     st.markdown(st.session_state.gpt_analysis)
 
 # =============================
@@ -501,7 +501,7 @@ report_html = f"""
 </div>
 
 <div class='section'>
-  <h2>Informe de IA</h2>
+  <h2>Informe</h2>
   {analysis_html}
 </div>
 
