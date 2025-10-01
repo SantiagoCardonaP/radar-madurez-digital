@@ -309,7 +309,7 @@ if wrapped:
         ),
         font=dict(size=18),
         showlegend=False,
-        margin=dict(t=60, b=60, l=60, r=60),
+        margin=dict(t=70, b=70, l=70, r=70),
         height=600,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
