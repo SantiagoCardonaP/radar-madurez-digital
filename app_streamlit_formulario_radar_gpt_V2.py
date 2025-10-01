@@ -488,24 +488,23 @@ report_html = f"""
 
 html_bytes = report_html.encode("utf-8")
 
-# Botón de descarga (frontend)
-clicked = st.download_button(
-    label="Descargar reporte (HTML)",
-    data=html_bytes,
-    file_name=filename,
-    mime="text/html",
-    use_container_width=True,
-    disabled=not st.session_state.habeas_aceptado
-)
-
 # Nombre con timestamp
-from datetime import datetime
 ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 filename = f"diagnostico_reporte_{ts}.html"
 
 clicked = st.download_button(
     label="Descargar reporte (HTML)",
     data=html_bytes,                # <- tu report_html.encode("utf-8")
+    file_name=filename,
+    mime="text/html",
+    use_container_width=True,
+    disabled=not st.session_state.habeas_aceptado
+)
+
+# Botón de descarga (frontend)
+clicked = st.download_button(
+    label="Descargar reporte (HTML)",
+    data=html_bytes,
     file_name=filename,
     mime="text/html",
     use_container_width=True,
