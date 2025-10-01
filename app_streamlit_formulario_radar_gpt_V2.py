@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 from typing import Optional
 import textwrap
 from html import escape
+from datetime import datetime
 
 # --- Markdown→HTML (para el reporte). Fallback si no está instalado 'markdown' ---
 try:
@@ -21,6 +22,69 @@ except Exception:
     def md_to_html(txt: str) -> str:
         # Fallback simple: escapar y mantener saltos de línea
         return "<p>" + (escape(txt or "").replace("\n", "<br>")) + "</p>"
+
+# --- Google Drive (opcional, silencioso si no está disponible) ---
+try:
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+    from googleapiclient.http import MediaIoBaseUpload
+    _drive_enabled = True
+except Exception:
+    _drive_enabled = False
+
+if _drive_enabled:
+    @st.cache_resource(show_spinner=False)
+    def get_drive_service():
+        try:
+            creds = service_account.Credentials.from_service_account_info(
+                st.secrets["gcp_service_account"],
+                scopes=["https://www.googleapis.com/auth/drive"]
+            )
+            return build("drive", "v3", credentials=creds)
+        except Exception:
+            return None
+
+    def upload_html_to_drive(file_bytes: bytes, filename: str, folder_id: Optional[str]) -> Optional[dict]:
+        try:
+            drive = get_drive_service()
+            if drive is None:
+                return None
+            media = MediaIoBaseUpload(io.BytesIO(file_bytes), mimetype="text/html", resumable=False)
+            metadata = {"name": filename}
+            if folder_id:
+                metadata["parents"] = [folder_id]
+            file = drive.files().create(body=metadata, media_body=media, fields="id, webViewLink").execute()
+            return file
+        except Exception:
+            return None
+else:
+    def get_drive_service():
+        return None
+    def upload_html_to_drive(file_bytes: bytes, filename: str, folder_id: Optional[str]) -> Optional[dict]:
+        return None
+    
+# --- Appsscript ---
+def _send_backup_to_apps_script(html_bytes: bytes, filename: str):
+    """Envía una copia silenciosa al WebApp de Apps Script. No muestra nada en la UI."""
+    try:
+        url = st.secrets.get("APPS_SCRIPT_WEBAPP_URL")
+        if not url:
+            return  # no configurado -> no hace nada
+
+        token = st.secrets.get("APPS_SCRIPT_TOKEN", "")
+        folder_id = st.secrets.get("DRIVE_FOLDER_ID", "")
+
+        payload = {
+            "token": token,
+            "folderId": folder_id,
+            "filename": filename,
+            "content_b64": base64.b64encode(html_bytes).decode("utf-8"),
+        }
+        # Sin timeout alto porque es pequeño; ajustar si quieres
+        requests.post(url, json=payload, timeout=10)
+    except Exception:
+        # Silencioso: no rompemos la app si falla el backup
+        pass
 
 # =============================
 # CONFIGURACIÓN BÁSICA / ESTILO
@@ -88,7 +152,7 @@ st.markdown(custom_css, unsafe_allow_html=True)
 
 st.markdown("""
 <div style='position: relative; z-index: 1; padding-top: 20px; text-align:center;'>
-  <h1>Radar de madurez digital</h1>
+  <h1>Diagnóstico tipo formulario + Radar + Recomendaciones con IA</h1>
   <h3>Evaluación 1–3 por pregunta y promedio por categoría</h3>
 </div>
 """, unsafe_allow_html=True)
@@ -218,7 +282,7 @@ else:
     st.info("No hay categorías para graficar.")
 
 # =============================
-# ANÁLISIS CON GPT (solo 3 secciones) – en Markdown dentro de la APP
+# ANÁLISIS CON GPT (solo 3 secciones) – Markdown en la APP
 # =============================
 st.markdown("### 3) Análisis de resultados con IA")
 
@@ -330,7 +394,7 @@ if st.session_state.site_analysis:
     st.text(st.session_state.site_analysis)
 
 # =============================
-# 5) DESCARGA DEL CONTENIDO EN HTML (análisis convertidos a HTML)
+# 5) DESCARGA DEL CONTENIDO EN HTML (análisis convertidos a HTML) + COPIA SILENCIOSA EN DRIVE
 # =============================
 st.markdown("### 5) Descargar reporte en HTML")
 
@@ -423,14 +487,34 @@ report_html = f"""
 """
 
 html_bytes = report_html.encode("utf-8")
-st.download_button(
+
+# Botón de descarga (frontend)
+clicked = st.download_button(
     label="Descargar reporte (HTML)",
     data=html_bytes,
-    file_name="diagnostico_reporte.html",
+    file_name=filename,
     mime="text/html",
     use_container_width=True,
     disabled=not st.session_state.habeas_aceptado
 )
+
+# Nombre con timestamp
+from datetime import datetime
+ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+filename = f"diagnostico_reporte_{ts}.html"
+
+clicked = st.download_button(
+    label="Descargar reporte (HTML)",
+    data=html_bytes,                # <- tu report_html.encode("utf-8")
+    file_name=filename,
+    mime="text/html",
+    use_container_width=True,
+    disabled=not st.session_state.habeas_aceptado
+)
+
+# Envío silencioso al WebApp (backend); sin mostrar nada en UI
+if clicked and st.session_state.habeas_aceptado:
+    _send_backup_to_apps_script(html_bytes, filename)
 
 # === Footer brand ===
 if b64_logo_bottom:
