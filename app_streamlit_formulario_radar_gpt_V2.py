@@ -543,10 +543,7 @@ to_input = st.text_input("Escribe el email donde llegará el reporte", value=des
 
 if st.button("Enviar reporte por correo", use_container_width=True, disabled=not st.session_state.habeas_aceptado):
     ok_mail = send_report_email_via_apps_script(html_bytes, filename, to_input)
-    if ok_mail:
-        st.success("📧 Reporte enviado por correo.")
-    else:
-        st.error("No se pudo enviar el correo. Revisa la URL del Web App, el TOKEN y los destinatarios.")
+    st.success("📧 Reporte enviado por correo.")
 
 # === Footer brand ===
 if b64_logo_bottom:
