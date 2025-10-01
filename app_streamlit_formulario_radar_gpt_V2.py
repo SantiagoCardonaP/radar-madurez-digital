@@ -236,7 +236,7 @@ with c1:
     st.session_state.celular = st.text_input("Celular", value=st.session_state.celular, placeholder="Ej. 3001234567")
 with c2:
     st.session_state.empresa = st.text_input("Nombre de la empresa", value=st.session_state.empresa, placeholder="Ej. ACME S.A.S.")
-    st.session_state.ventas_mes = st.number_input("Promedio de ventas al mes", min_value=0.0, value=float(st.session_state.ventas_mes), step=100.0)
+    st.session_state.ventas_mes = st.number_input("Promedio de ventas al mes", min_value=0, value=int(st.session_state.ventas_mes), step=100)
 
 st.session_state.habeas_aceptado = st.checkbox(
     "Autorizo el tratamiento de mis datos (Habeas Data).",
