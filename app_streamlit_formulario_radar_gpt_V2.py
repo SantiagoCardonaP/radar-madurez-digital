@@ -296,6 +296,7 @@ categories_closed = wrapped + [wrapped[0]] if wrapped else []
 values_closed = values + [values[0]] if values else []
 
 if wrapped:
+    fig = go.Figure(data=[go.Scatterpolar(r=values_closed, theta=categories_closed, fill="toself", name="Promedio")])
     fig.update_layout(
         polar=dict(
             radialaxis=dict(
