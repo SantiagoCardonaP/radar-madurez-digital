@@ -316,7 +316,7 @@ else:
 # =============================
 # ANÁLISIS CON GPT (solo 3 secciones) – Markdown en la APP
 # =============================
-st.markdown("### 3) Análisis de resultados con IA")
+st.markdown("### 3) Análisis de resultados")
 
 def build_summary_text(df: pd.DataFrame) -> str:
     by_cat = df.groupby("Categoría")["Calificación"].agg(["count", "mean"]).round(2)
