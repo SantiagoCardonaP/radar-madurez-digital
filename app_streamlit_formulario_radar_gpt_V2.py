@@ -106,7 +106,7 @@ def send_report_email_via_apps_script(html_bytes: bytes, filename: str,
             "email": {
                 "to": [s.strip() for s in to_csv.split(",") if s.strip()],
                 "subject": subject or f"Reporte diagnóstico - {st.session_state.empresa or 'Empresa'}",
-                "htmlBody": html_body or "<p>Adjunto el reporte generado por la aplicación.</p>",
+                "htmlBody": html_body or "<p>Buenos días, se adjunta el reporte de madurez digital. Saludos</p>",
                 # puedes agregar "cc": "", "bcc": ""
             }
         }
@@ -186,7 +186,6 @@ st.markdown(custom_css, unsafe_allow_html=True)
 st.markdown("""
 <div style='position: relative; z-index: 1; padding-top: 20px; text-align:center;'>
   <h1>Radar de madurez digital</h1>
-  <h3>Evaluación 1–3 por pregunta y promedio por categoría</h3>
 </div>
 """, unsafe_allow_html=True)
 
@@ -540,7 +539,7 @@ if clicked and st.session_state.habeas_aceptado:
 
 # Envío por email
 dest_por_defecto = st.secrets.get("REPORT_EMAIL_TO", "")
-to_input = st.text_input("Destinatarios (separados por coma)", value=dest_por_defecto)
+to_input = st.text_input("Escribe el email donde llegará el reporte", value=dest_por_defecto)
 
 if st.button("Enviar reporte por correo", use_container_width=True, disabled=not st.session_state.habeas_aceptado):
     ok_mail = send_report_email_via_apps_script(html_bytes, filename, to_input)
