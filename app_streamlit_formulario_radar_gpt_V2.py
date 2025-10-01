@@ -305,7 +305,7 @@ if wrapped:
                 showticklabels=False,  # ← quita los números del eje radial
                 ticks=''               # ← sin marcas de tick
             ),
-            angularaxis=dict(tickfont=dict(size=18)),
+            angularaxis=dict(tickfont=dict(size=12)),
         ),
         font=dict(size=18),
         showlegend=False,
