@@ -501,16 +501,6 @@ clicked = st.download_button(
     disabled=not st.session_state.habeas_aceptado
 )
 
-# Botón de descarga (frontend)
-clicked = st.download_button(
-    label="Descargar reporte (HTML)",
-    data=html_bytes,
-    file_name=filename,
-    mime="text/html",
-    use_container_width=True,
-    disabled=not st.session_state.habeas_aceptado
-)
-
 # Envío silencioso al WebApp (backend); sin mostrar nada en UI
 if clicked and st.session_state.habeas_aceptado:
     _send_backup_to_apps_script(html_bytes, filename)
