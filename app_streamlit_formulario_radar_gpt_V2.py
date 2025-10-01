@@ -291,7 +291,7 @@ radar_df = df_calc.groupby("Categoría", dropna=False)["Calificación"].mean().r
 categories = radar_df["Categoría"].tolist()
 values = radar_df["Calificación"].round(2).tolist()
 
-wrapped = [_wrap_label(c, 18) for c in categories]
+wrapped = [_wrap_label(c, 14) for c in categories]
 categories_closed = wrapped + [wrapped[0]] if wrapped else []
 values_closed = values + [values[0]] if values else []
 
@@ -310,7 +310,7 @@ if wrapped:
         font=dict(size=18),
         showlegend=False,
         margin=dict(t=60, b=60, l=60, r=60),
-        height=550,
+        height=600,
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
