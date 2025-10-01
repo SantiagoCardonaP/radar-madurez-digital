@@ -86,6 +86,39 @@ def _send_backup_to_apps_script(html_bytes: bytes, filename: str):
         # Silencioso: no rompemos la app si falla el backup
         pass
 
+# --- Email ---
+def send_report_email_via_apps_script(html_bytes: bytes, filename: str,
+                                      to_csv: str, subject: str = None, html_body: str = None) -> bool:
+    """Envía el reporte por correo adjunto usando el Web App de Apps Script.
+       Devuelve True si ok (respuesta ok:true), False si falla o no está configurado."""
+    try:
+        url = st.secrets.get("APPS_SCRIPT_WEBAPP_URL")
+        if not url:
+            return False
+        token = st.secrets.get("APPS_SCRIPT_TOKEN", "")
+        folder_id = st.secrets.get("DRIVE_FOLDER_ID", "")  # opcional; así también guarda copia en Drive
+
+        payload = {
+            "token": token,
+            "folderId": folder_id,  # quita este campo si NO quieres copia en Drive
+            "filename": filename,
+            "content_b64": base64.b64encode(html_bytes).decode("utf-8"),
+            "email": {
+                "to": [s.strip() for s in to_csv.split(",") if s.strip()],
+                "subject": subject or f"Reporte diagnóstico - {st.session_state.empresa or 'Empresa'}",
+                "htmlBody": html_body or "<p>Adjunto el reporte generado por la aplicación.</p>",
+                # puedes agregar "cc": "", "bcc": ""
+            }
+        }
+        r = requests.post(url, json=payload, timeout=15)
+        if r.status_code != 200:
+            return False
+        data = r.json()
+        return bool(data.get("ok"))
+    except Exception:
+        return False
+
+
 # =============================
 # CONFIGURACIÓN BÁSICA / ESTILO
 # =============================
@@ -504,6 +537,17 @@ clicked = st.download_button(
 # Envío silencioso al WebApp (backend); sin mostrar nada en UI
 if clicked and st.session_state.habeas_aceptado:
     _send_backup_to_apps_script(html_bytes, filename)
+
+# Envío por email
+dest_por_defecto = st.secrets.get("REPORT_EMAIL_TO", "")
+to_input = st.text_input("Destinatarios (separados por coma)", value=dest_por_defecto)
+
+if st.button("Enviar reporte por correo", use_container_width=True, disabled=not st.session_state.habeas_aceptado):
+    ok_mail = send_report_email_via_apps_script(html_bytes, filename, to_input)
+    if ok_mail:
+        st.success("📧 Reporte enviado por correo.")
+    else:
+        st.error("No se pudo enviar el correo. Revisa la URL del Web App, el TOKEN y los destinatarios.")
 
 # === Footer brand ===
 if b64_logo_bottom:
